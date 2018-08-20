@@ -4,12 +4,18 @@
  */
 
 #include "stm32f4xx.h"
+#include "misc.h"
 #include "stdio.h"
 #include "string.h"
 #include "bitband.h"
 #include "control.h"
 #include "video.h"
 #include "graphics.h"
+#include "rasterize.h"
+
+extern PIXEL lineBuf0[1024];
+extern PIXEL lineBuf1[1024];
+extern PPIXEL renderBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 // Using PAL timing of 4.7uS for sync and 5.8uS for back porch, and 1.5us for front porch.
@@ -245,8 +251,8 @@ void initPixelClock()
 
 void initPixelDma()
 {
-	memset(linebuf0, 0, sizeof(linebuf0));
-	memset(linebuf1, 0, sizeof(linebuf1));
+	memset(lineBuf0, 0, sizeof(lineBuf0));
+	memset(lineBuf1, 0, sizeof(lineBuf1));
 
 	NVIC_InitTypeDef nvic;
 	DMA_InitTypeDef	dmai;
@@ -258,7 +264,7 @@ void initPixelDma()
 	// Needs to be DMA2 because DMA1 does not have access to the peripherals (http://cliffle.com/article/2015/06/06/pushing-pixels/)
 	DMA_StructInit(&dmai);
 	dmai.DMA_PeripheralBaseAddr 	= (u32)&GPIOF->ODR;
-	dmai.DMA_Memory0BaseAddr 		= (u32)linebuf0;
+	dmai.DMA_Memory0BaseAddr 		= (u32)lineBuf0;
 	dmai.DMA_DIR 					= DMA_DIR_MemoryToPeripheral;
 	dmai.DMA_BufferSize 			= pixelsPerLine + 4;
 	dmai.DMA_PeripheralInc 			= DMA_PeripheralInc_Disable;
@@ -288,18 +294,18 @@ void initPixelDma()
 void prepareNextScanLine()
 {
 	// Swap buffers
-	/*
-	renderbuf = (u8*)DMA2_Stream1->M0AR;
-	DMA2_Stream1->M0AR = (u32)((renderbuf == linebuf0) ? linebuf1 : linebuf0);
-	*/
-
-	DMA2_Stream1->M0AR = (u32)linebuf0;
+	renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
+	DMA2_Stream1->M0AR = (u32)((renderBuf == lineBuf0) ? lineBuf1 : lineBuf0);
 
 	// Re-enable DMA for next scanline. NDTR and M0AR will automatically reload to their original values.
 	DMA2_Stream1->CR |= DMA_SxCR_EN;
 
 	// Re-enable slave mode on TIM8 so that on next TIM2 update, TIM8 starts
 	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ITR1;
+
+	// For now, simply call this function from the interrupt. Later, will want to
+	// do a context switch to it.
+	rasterizeNextScanLine();
 }
 
 void __attribute__((interrupt("IRQ"))) DMA2_Stream1_IRQHandler(void)
@@ -340,67 +346,10 @@ void __attribute__((interrupt("IRQ"))) EXTI2_IRQHandler(void)
 	toggleLed1();
 }
 
-void initTestPattern()
-{
-	u32 startPos = 100;
-	for(u32 i=0; i<100; i++)
-	{
-		linebuf0[i + startPos] = RED;
-		linebuf1[i + startPos] = RED;
-	}
-
-	startPos = 200;
-	for(u32 i=0; i<100; i++)
-	{
-		linebuf0[i + startPos] = GREEN;
-		linebuf1[i + startPos] = GREEN;
-	}
-
-	startPos = 300;
-	for(u32 i=0; i<100; i++)
-	{
-		linebuf0[i + startPos] = BLUE;
-		linebuf1[i + startPos] = BLUE;
-	}
-
-	startPos = 400;
-	for(u32 i=0; i<50; i++)
-	{
-		linebuf0[i + startPos] = WHITE;
-		linebuf1[i + startPos] = WHITE;
-	}
-
-	startPos = 450;
-	for(u32 i=0; i<50; i++)
-	{
-		linebuf0[i + startPos] = RGBA(0,0,0,1);
-		linebuf1[i + startPos] = RGBA(0,0,0,1);
-	}
-
-	startPos = 500;
-	for(u32 i=0; i<30; i++)
-	{
-		linebuf0[i + startPos] = RGB(1,1,1);
-		linebuf1[i + startPos] = RGB(1,1,1);
-	}
-
-	startPos = 530;
-	for(u32 i=0; i<30; i++)
-	{
-		linebuf0[i + startPos] = RGB(2,2,2);
-		linebuf1[i + startPos] = RGB(2,2,2);
-	}
-
-	startPos = 560;
-	for(u32 i=0; i<30; i++)
-	{
-		linebuf0[i + startPos] = RGB(3,3,3);
-		linebuf1[i + startPos] = RGB(3,3,3);
-	}
-}
-
 void initVideo()
 {
+	renderBuf = lineBuf1;
+
 	initRCC();
 	initSyncPort();
 	initPixelPort();
@@ -410,8 +359,6 @@ void initVideo()
 	initPixelDma();
 
 	printf("Video configured\r\n");
-
-	initTestPattern();
 
 	TIM_Cmd(TIM3, ENABLE);
 	TIM_Cmd(TIM2, ENABLE);

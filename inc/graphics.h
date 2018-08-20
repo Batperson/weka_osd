@@ -30,7 +30,4 @@ typedef u8 PIXEL, *PPIXEL;
 
 #define TRANSPARENT			(PIXEL)0
 
-extern PIXEL linebuf0[1024];
-extern PIXEL linebuf1[1024];
-
 #endif /* GRAPHICS_H_ */
