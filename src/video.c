@@ -251,9 +251,6 @@ void initPixelClock()
 
 void initPixelDma()
 {
-	memset(lineBuf0, 0, sizeof(lineBuf0));
-	memset(lineBuf1, 0, sizeof(lineBuf1));
-
 	NVIC_InitTypeDef nvic;
 	DMA_InitTypeDef	dmai;
 
@@ -348,6 +345,8 @@ void __attribute__((interrupt("IRQ"))) EXTI2_IRQHandler(void)
 
 void initVideo()
 {
+	memset(lineBuf0, 0, sizeof(lineBuf0));
+	memset(lineBuf1, 0, sizeof(lineBuf1));
 	renderBuf = lineBuf1;
 
 	initRCC();
