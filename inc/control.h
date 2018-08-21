@@ -1,6 +1,6 @@
 /*
  * control.h
- *
+ * High-level hardware control
  */
 
 #ifndef CONTROL_H_
@@ -124,22 +124,22 @@ typedef enum {
 	OFF = 0x01
 } LEDStatusType;
 
-inline __attribute__((always_inline)) void setLed1 (LEDStatusType status)
+ALWAYS_INLINE void setLed1 (LEDStatusType status)
 {
 	BITBAND_ACCESS(GPIOF->ODR, 9) = status;
 }
 
-inline __attribute__((always_inline)) void setLed2(LEDStatusType status)
+ALWAYS_INLINE void setLed2(LEDStatusType status)
 {
 	BITBAND_ACCESS(GPIOF->ODR, 10) = status;
 }
 
-inline __attribute__((always_inline)) void toggleLed1()
+ALWAYS_INLINE void toggleLed1()
 {
 	BITBAND_ACCESS(GPIOF->ODR, 9) = !BITBAND_ACCESS(GPIOF->ODR, 9);
 }
 
-inline __attribute__((always_inline)) void toggleLed2()
+ALWAYS_INLINE void toggleLed2()
 {
 	BITBAND_ACCESS(GPIOF->ODR, 10) = !BITBAND_ACCESS(GPIOF->ODR, 10);
 }

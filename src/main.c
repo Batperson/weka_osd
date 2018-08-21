@@ -1,5 +1,6 @@
 #include "stdio.h"
 #include "stm32f4xx.h"
+#include "misc.h"
 #include "bitband.h"
 #include "i2c.h"
 #include "control.h"
@@ -57,9 +58,11 @@ int main(void)
   initLeds();
   initI2C1();
   initVideoChips();
+  initSystem();
+
+  setFastBlankMode(FBModeDynamic);
+
   initVideo();
-  //showTestPattern();
-  //setYPrPbComponentOutput();
 
   while (1)
   {

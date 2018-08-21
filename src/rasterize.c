@@ -15,7 +15,7 @@ void rasterizeNextScanLine()
 {
 	// For now, just generate a test pattern.
 
-	PIXEL colourBars[] = { RED, GREEN, BLUE, TRANSPARENT, WHITE, RGBA(0,0,0,1), RGB(1,1,1), RGB(2,2,2), RGB(3,3,3), RGBA(0,0,0,1) };
+	PIXEL colourBars[] = { RED, GREEN, BLUE, RGBA(0,0,0,1), /*TRANSPARENT, WHITE, RGB(1,1,1), RGB(2,2,2), RGB(3,3,3), RGBA(0,0,0,1)*/ };
 	PPIXEL pos = renderBuf + 100;
 
 	for(u32 i=0; i<sizeof(colourBars); i++)

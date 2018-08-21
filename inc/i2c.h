@@ -1,6 +1,6 @@
 /*
  * i2c.h
- *
+ * Low-level I2C hardware communication
  */
 
 #ifndef I2C_H_

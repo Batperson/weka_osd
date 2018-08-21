@@ -305,7 +305,7 @@ void prepareNextScanLine()
 	rasterizeNextScanLine();
 }
 
-void __attribute__((interrupt("IRQ"))) DMA2_Stream1_IRQHandler(void)
+void INTERRUPT DMA2_Stream1_IRQHandler(void)
 {
 	// Clear interrupt flags
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1;
@@ -320,13 +320,13 @@ void __attribute__((interrupt("IRQ"))) DMA2_Stream1_IRQHandler(void)
 	prepareNextScanLine();
 }
 
-void __attribute__((interrupt("IRQ"))) TIM3_IRQHandler(void)
+void INTERRUPT TIM3_IRQHandler(void)
 {
 	// Clear pending interrupt(s)
 	TIM3->SR = 0;
 }
 
-void __attribute__((interrupt("IRQ"))) EXTI2_IRQHandler(void)
+void INTERRUPT EXTI2_IRQHandler(void)
 {
 	// Clear pending interrupts
 	EXTI->PR 	= 0;

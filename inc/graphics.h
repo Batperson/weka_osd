@@ -1,6 +1,6 @@
 /*
  * graphics.h
- *
+ * High-level graphic routines
  */
 
 #ifndef GRAPHICS_H_

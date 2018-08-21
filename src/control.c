@@ -4,6 +4,7 @@
  */
 
 #include "stm32f4xx.h"
+#include "misc.h"
 #include "i2c.h"
 #include "bitband.h"
 #include "control.h"

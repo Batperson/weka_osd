@@ -1,6 +1,6 @@
 /*
  * bitband.h
- *
+ * Utility functions for bit manipulation using the bitband memory region
  */
 
 #ifndef BITBAND_H_

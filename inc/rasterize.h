@@ -1,6 +1,6 @@
 /*
  * rasterize.h
- *
+ * Generation of pixel scanline output
  */
 
 #ifndef RASTERIZE_H_

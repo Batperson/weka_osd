@@ -1,6 +1,6 @@
 /*
  * video.h
- *
+ * Video timing and DMA
  */
 
 #ifndef VIDEO_H_
