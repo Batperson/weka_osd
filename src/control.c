@@ -33,15 +33,30 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x00, 0x00);	// Autodetect, CVBS PAL/NTSC/SECAM on AIN1
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x17, 0x41);	// Shaping filter control 1, 1 undocumented setting
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x1D, 0x47);	// Enable 28MHz Crystal
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x19, 0xFA);	// Split filter control
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x31, 0x02);	// Clears NEWAV_MODE, SAV/EAV  to suit ADV video encoders
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3A, 0x17);	// Set Latch Clock & power *DOWN* ADC 1 & ADC2 & ADC3
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x19, 0xFA);	// F1 default ** Comb filter control
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x31, 0x02);	// Clear NEWAV_MODE, SAV/EAV codes to suit ADV video encoders
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3A, 0x10);	// Set Latch Clock & power up ADC0 - 3
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3B, 0x71);	// IBIAS ADJUST
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3D, 0xA2);	// Windowing function 1. MWE Enable Manual Window, Colour Kill Threshold to 2
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3E, 0x6A);	// Windowing function 2. BLM optimisation
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3F, 0xA0);	// Windowing function 3. BGB
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF1, 0x05);	// *mine* RGB on AIN4,5,6, 50% contrast, FB threshold = 1.4V
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF3, 0x01);	// Enable Anti Alias Filter on ADC0
+
+	// New stuff for SCART
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x4D, 0xEE);	// Disable Chroma Transient Improvement
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x67, 0x01);	// Format 422, undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x73, 0xD0);	// Manual Gain Channels A,B,C , undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x74, 0x04);	// Manual Gain Channels A,B,C , undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x75, 0x01);	// Manual Gain Channels A,B,C , undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x76, 0x00);	// Manual Gain Channels A,B,C , undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x77, 0x04);	// Manual Offsets A to 64d & B,C to 512, undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x78, 0x08);	// Manual Offsets A to 64d & B,C to 512, undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x79, 0x02);	// Manual Offsets A to 64d & B,C to 512, undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x7A, 0x00);	// Manual Offsets A to 64d & B,C to 512, undocumented setting
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0xC5, 0x00);	// Clamp Mode 0 for FB hc based, undocumented setting
+	//I2C_WriteByte(I2C1, ADDR_DECODER, 0xED, 0x10);	// Static RGB input
+	//
+
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF3, 0x0F);	// Enable Anti Alias Filter on ADC0-3
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF9, 0x03);	// Set max v lock range
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x0E, 0x80);	// ADI Recommended Write
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x52, 0x46);	// ADI Recommended Write
@@ -73,9 +88,13 @@ void initVideoChips()
 
 	//mine
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x04, 0x65);	// SFL off, ITU-R BT.656-3 compatible
-	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x88, 0x00);	// 8-bit input
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF1, 0x01);	// RGB on AIN4,5,6
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_AD_ENABLE, DEC_AD_PAL_EN | DEC_AD_NTSC_EN | DEC_AD_PALM_EN | DEC_AD_PALN_EN);	// Disable SECAM autodetect
+	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x88, 0x00);	// 8-bit input
 
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x34, 0x00);	// HS Control
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x35, 0x01);	// HS Control
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x36, 0x00);	// HS Control
 }
 
 void showTestPattern()

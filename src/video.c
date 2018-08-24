@@ -13,13 +13,13 @@
 #include "graphics.h"
 #include "rasterize.h"
 
-extern PIXEL lineBuf0[1024];
-extern PIXEL lineBuf1[1024];
-extern PPIXEL renderBuf;
+static volatile PIXEL lineBuf0[1024];
+static volatile PIXEL lineBuf1[1024];
+extern volatile PPIXEL renderBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 // Using PAL timing of 4.7uS for sync and 5.8uS for back porch, and 1.5us for front porch.
-static const u16 pixelStartNanoseconds			= 10500;
+static const u16 pixelStartNanoseconds			= 6500; //10500;
 static const u16 pixelOutputNanoseconds			= 52000;
 static const u16 pixelsPerLine					= 768;			// PAL = 768*576, NTSC = 640*480
 static const u16 activeVideoLineStart			= 23;			// NTSC starts on line 16?
@@ -76,7 +76,7 @@ void initSyncPort()
 	gpio.GPIO_PuPd 		= GPIO_PuPd_NOPULL;
 
 	GPIO_Init(GPIOA, &gpio);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource0, GPIO_AF_TIM2);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource0, GPIO_AF_TIM8); // GPIO_AF_TIM2
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource1, GPIO_AF_TIM2);
 
 	/* Configure PA2 and PA3 for VSYNC and FIELD */
@@ -132,7 +132,7 @@ void initHSync()
 
 	timb.TIM_Prescaler 			= 0;
 	timb.TIM_CounterMode 		= TIM_CounterMode_Up;
-	timb.TIM_Period 			= calcAPB1TimerPeriod(pixelStartNanoseconds);
+	timb.TIM_Period 			= 1;// calcAPB1TimerPeriod(pixelStartNanoseconds);
 	timb.TIM_ClockDivision 		= TIM_CKD_DIV1;
 	TIM_TimeBaseInit(TIM2, &timb);
 
@@ -214,7 +214,12 @@ void initPixelClock()
 	TIM_TimeBaseInit(TIM8, &timb);
 
 	TIM_SelectSlaveMode(TIM8, TIM_SlaveMode_Trigger);
-	TIM_SelectInputTrigger(TIM8, TIM_TS_ITR1);		// For TIM8, ITR1 = TIM2 TRGO, p565 reference manual
+	//TIM_SelectInputTrigger(TIM8, TIM_TS_ITR1);		// For TIM8, ITR1 = TIM2 TRGO, p565 reference manual
+
+	TIM_SelectInputTrigger(TIM8, TIM_TS_ETRF);
+	TIM_ETRConfig(TIM8, TIM_ExtTRGPSC_OFF, TIM_ExtTRGPolarity_Inverted, 0);
+
+
 	TIM_DMACmd(TIM8, TIM_DMA_Update, ENABLE);
 
 	TIM_OCInitTypeDef			ocnt;
@@ -271,9 +276,9 @@ void initPixelDma()
 	dmai.DMA_Mode 					= DMA_Mode_Normal;
 	dmai.DMA_Priority 				= DMA_Priority_VeryHigh;
 	dmai.DMA_Channel 				= DMA_Channel_7;
-	dmai.DMA_FIFOMode 				= DMA_FIFOMode_Disable;	// *
+	dmai.DMA_FIFOMode 				= DMA_FIFOMode_Enable;
 	dmai.DMA_FIFOThreshold 			= DMA_FIFOThreshold_Full;
-	dmai.DMA_MemoryBurst 			= DMA_MemoryBurst_Single;
+	dmai.DMA_MemoryBurst 			= DMA_MemoryBurst_INC4;
 	dmai.DMA_PeripheralBurst 		= DMA_PeripheralBurst_Single;
 	DMA_Init(DMA2_Stream1, &dmai);
 
@@ -291,18 +296,18 @@ void initPixelDma()
 void prepareNextScanLine()
 {
 	// Swap buffers
-	renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
-	DMA2_Stream1->M0AR = (u32)((renderBuf == lineBuf0) ? lineBuf1 : lineBuf0);
+	//renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
+	//DMA2_Stream1->M0AR = (u32)((renderBuf == lineBuf0) ? lineBuf1 : lineBuf0);
 
 	// Re-enable DMA for next scanline. NDTR and M0AR will automatically reload to their original values.
 	DMA2_Stream1->CR |= DMA_SxCR_EN;
 
 	// Re-enable slave mode on TIM8 so that on next TIM2 update, TIM8 starts
-	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ITR1;
+	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF; // TIM_TS_ITR1;
 
 	// For now, simply call this function from the interrupt. Later, will want to
 	// do a context switch to it.
-	rasterizeNextScanLine();
+	//rasterizeNextScanLine();
 }
 
 void INTERRUPT DMA2_Stream1_IRQHandler(void)
@@ -345,9 +350,16 @@ void INTERRUPT EXTI2_IRQHandler(void)
 
 void initVideo()
 {
-	memset(lineBuf0, 0, sizeof(lineBuf0));
-	memset(lineBuf1, 0, sizeof(lineBuf1));
-	renderBuf = lineBuf1;
+	//memset(lineBuf0, 0, sizeof(lineBuf0));
+	//memset(lineBuf1, 0, sizeof(lineBuf1));
+
+	renderBuf = lineBuf0;
+
+	rasterizeNextScanLine();
+
+	//renderBuf = lineBuf1;
+
+	//rasterizeNextScanLine();
 
 	initRCC();
 	initSyncPort();

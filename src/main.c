@@ -4,6 +4,7 @@
 #include "bitband.h"
 #include "i2c.h"
 #include "control.h"
+#include "system.h"
 #include "video.h"
 
 /*
@@ -60,6 +61,7 @@ int main(void)
   initVideoChips();
   initSystem();
 
+  setFastBlankContrastReductionMode(FBContrastReductionDisabled);
   setFastBlankMode(FBModeDynamic);
 
   initVideo();

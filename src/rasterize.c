@@ -10,24 +10,30 @@
 
 PIXEL  lineBuf0[1024] IN_CCM ALIGNED(1024);
 PIXEL  lineBuf1[1024] IN_CCM ALIGNED(1024);
-PPIXEL renderBuf IN_CCM;
+volatile PPIXEL renderBuf IN_CCM;
 
-Sprite testpattern;
+SPRITE testpattern;
 
-PSpriteHeader sprites[10];
+PSPRITE sprites[10];
 
 void rasterizeNextScanLine()
 {
 	// For now, just generate a test pattern.
-
-	PIXEL colourBars[] = { RED, GREEN, BLUE, RGBA(0,0,0,1), TRANSPARENT, WHITE, RGB(1,1,1) /*, RGB(2,2,2), RGB(3,3,3), RGBA(0,0,0,1)*/ };
-	PPIXEL pos = renderBuf + 100;
+	PIXEL colourBars[] = { RED, GREEN, BLUE, WHITE };//, RGBA(0,0,0,1), TRANSPARENT, RGB(1,1,1) /*, RGB(2,2,2), RGB(3,3,3), RGBA(0,0,0,1)*/ };
+	PPIXEL pos = renderBuf;
 
 	for(u32 i=0; i<sizeof(colourBars); i++)
 	{
-		for(u32 j=0; j<40; j++)
+		for(u32 j=0; j<20; j++)
 		{
 			*pos++ = colourBars[i];
 		}
 	}
+
+	/*
+	u32 width = 80;// 768;
+
+	for(u32 i=0; i<width; i++)
+		*pos++ = WHITE;
+	*/
 }

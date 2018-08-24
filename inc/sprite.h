@@ -25,7 +25,7 @@ typedef struct
 {
 	u16 	flags;
 	u16		type;
-	Rect 	rect;
+	RECT 	rect;
 } SPRITEHEADER, *PSPRITEHEADER;
 
 typedef SPRITEHEADER SPRITE;
@@ -33,7 +33,7 @@ typedef PSPRITEHEADER PSPRITE;
 
 typedef struct
 {
-	SpriteHeader header;
+	SPRITEHEADER header;
 } BITMAPSPRITE;
 
 #endif /* SPRITE_H_ */
