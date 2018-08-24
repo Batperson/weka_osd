@@ -11,7 +11,6 @@
   Pin and peripheral Usage:
 
   PA0			HSYNC input
-  PA1			Pixel start signal output for debugging
   PA2			VSYNC input
   PA3			FIELD input
   PB6-7			I2C SCL and SDA output
@@ -19,8 +18,7 @@
   PF0-7			Pixel bus output
   PF9-10		LEDs, active low
 
-  TIM2			Counter used to start pixel clock
-  TIM3			Video line counter
+  TIM2			Video line counter
   TIM8			Pixel clock for DMA
 */
 

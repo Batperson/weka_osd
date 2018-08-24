@@ -34,7 +34,7 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x17, 0x41);	// Shaping filter control 1, 1 undocumented setting
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x1D, 0x47);	// Enable 28MHz Crystal
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x19, 0xFA);	// F1 default ** Comb filter control
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x31, 0x02);	// Clear NEWAV_MODE, SAV/EAV codes to suit ADV video encoders
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x31, 0x02);	// Clear NEWAV_MODE disable, generate SAV/EAV codes to suit ADV video encoders
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3A, 0x10);	// Set Latch Clock & power up ADC0 - 3
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3B, 0x71);	// IBIAS ADJUST
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x3D, 0xA2);	// Windowing function 1. MWE Enable Manual Window, Colour Kill Threshold to 2
@@ -53,7 +53,6 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x79, 0x02);	// Manual Offsets A to 64d & B,C to 512, undocumented setting
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x7A, 0x00);	// Manual Offsets A to 64d & B,C to 512, undocumented setting
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0xC5, 0x00);	// Clamp Mode 0 for FB hc based, undocumented setting
-	//I2C_WriteByte(I2C1, ADDR_DECODER, 0xED, 0x10);	// Static RGB input
 	//
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF3, 0x0F);	// Enable Anti Alias Filter on ADC0-3
@@ -84,7 +83,7 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x01, 0x80);	// SD Mode only, Data input on Y-Bus
 	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x80, 0x11);	// SSAF Luma filter enabled, PAL B/D/G/H/I mode
 	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x82, 0xCD);	// Step control on, pixel data valid, pedestal on, PrPb SSAF on, CVBS/Pb/Pr on DAC1,2,3
-	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x87, 0x60);	// PAL/NTSC auto-detect enabled, and some other undocumented bit set to 1 which is not supposed to be
+	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x87, 0x60);	// PAL/NTSC auto-detect enabled, and one other undocumented bit
 
 	//mine
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x04, 0x65);	// SFL off, ITU-R BT.656-3 compatible
@@ -92,9 +91,10 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_AD_ENABLE, DEC_AD_PAL_EN | DEC_AD_NTSC_EN | DEC_AD_PALM_EN | DEC_AD_PALN_EN);	// Disable SECAM autodetect
 	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x88, 0x00);	// 8-bit input
 
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x34, 0x00);	// HS Control
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x35, 0x01);	// HS Control
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x36, 0x00);	// HS Control
+	// Adjust the position of HSYNC, so it reflects the timing of the CVBS input rather than the digital output
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x34, 0x33);	// HS Control
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x35, 0x51);	// HS Control
+	I2C_WriteByte(I2C1, ADDR_DECODER, 0x36, 0x50);	// HS Control
 }
 
 void showTestPattern()

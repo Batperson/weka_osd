@@ -13,13 +13,11 @@
 #include "graphics.h"
 #include "rasterize.h"
 
-static volatile PIXEL lineBuf0[1024];
-static volatile PIXEL lineBuf1[1024];
-extern volatile PPIXEL renderBuf;
+static volatile PIXEL lineBuf0[LINE_BUFFER_SIZE];
+static volatile PIXEL lineBuf1[LINE_BUFFER_SIZE];
+volatile PPIXEL renderBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
-// Using PAL timing of 4.7uS for sync and 5.8uS for back porch, and 1.5us for front porch.
-static const u16 pixelStartNanoseconds			= 6500; //10500;
 static const u16 pixelOutputNanoseconds			= 52000;
 static const u16 pixelsPerLine					= 768;			// PAL = 768*576, NTSC = 640*480
 static const u16 activeVideoLineStart			= 23;			// NTSC starts on line 16?
@@ -68,16 +66,15 @@ void initSyncPort()
 	NVIC_InitTypeDef nvic;
 	GPIO_StructInit(&gpio);
 
-	/* Configure PA0 and PA1 for Alternate Function 1 (TIM2 ETR and TIM2 CH2), datasheet page 62 */
-	gpio.GPIO_Pin 		= GPIO_Pin_0 | GPIO_Pin_1;
+	/* Configure PA0 for Alternate Function 1 (TIM8 ETR), datasheet page 62 */
+	gpio.GPIO_Pin 		= GPIO_Pin_0;
 	gpio.GPIO_Mode 		= GPIO_Mode_AF;
 	gpio.GPIO_Speed 	= GPIO_Speed_50MHz;
 	gpio.GPIO_OType 	= GPIO_OType_PP;
 	gpio.GPIO_PuPd 		= GPIO_PuPd_NOPULL;
 
 	GPIO_Init(GPIOA, &gpio);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource0, GPIO_AF_TIM8); // GPIO_AF_TIM2
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource1, GPIO_AF_TIM2);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource0, GPIO_AF_TIM8);
 
 	/* Configure PA2 and PA3 for VSYNC and FIELD */
 	GPIO_StructInit(&gpio);
@@ -117,88 +114,6 @@ void initPixelPort()
 	GPIO_Init(GPIOF, &GPIO_InitStructure);
 }
 
-void initHSync()
-{
-	/* Run TIM2 in externally-triggered one-pulse mode.
-	 * HSYNC from ADC starts the timer.
-	 * Overflow event occurs at the time pixel output should start. Also toggle a pin for debugging.
-	 */
-	TIM_TimeBaseInitTypeDef		timb;
-	TIM_OCInitTypeDef			ocnt;
-
-	TIM_TimeBaseStructInit(&timb);
-	TIM_OCStructInit(&ocnt);
-	TIM_DeInit(TIM2);
-
-	timb.TIM_Prescaler 			= 0;
-	timb.TIM_CounterMode 		= TIM_CounterMode_Up;
-	timb.TIM_Period 			= 1;// calcAPB1TimerPeriod(pixelStartNanoseconds);
-	timb.TIM_ClockDivision 		= TIM_CKD_DIV1;
-	TIM_TimeBaseInit(TIM2, &timb);
-
-	ocnt.TIM_OCMode 			= TIM_OCMode_PWM1;
-	ocnt.TIM_Pulse 				= timb.TIM_Period / 2;	// Output a PWM pulse just before pixel start, for debug
-	ocnt.TIM_OutputState 		= TIM_OutputState_Enable;
-	ocnt.TIM_OutputNState 		= TIM_OutputState_Disable;
-	ocnt.TIM_OCPolarity 		= TIM_OCPolarity_High;
-	ocnt.TIM_OCIdleState 		= TIM_OCIdleState_Reset;
-	TIM_OC2Init(TIM2, &ocnt);
-
-	TIM_SelectOnePulseMode(TIM2, TIM_OPMode_Single);
-	TIM_SelectInputTrigger(TIM2, TIM_TS_ETRF);
-	TIM_ETRConfig(TIM2, TIM_ExtTRGPSC_OFF, TIM_ExtTRGPolarity_Inverted, 0);
-	TIM_SelectSlaveMode(TIM2, TIM_SlaveMode_Trigger);
-	TIM_SelectMasterSlaveMode(TIM2, TIM_MasterSlaveMode_Enable);
-	TIM_SelectOutputTrigger(TIM2, TIM_TRGOSource_Update);
-
-	TIM_CtrlPWMOutputs(TIM2, ENABLE);		// TIM main output enable
-}
-
-void initLineCounter()
-{
-	/* Run TIM3 in internally-triggered mode.
-	 * Trigger output from TIM2 (overflow) clocks the timer.
-	 * Counter is reset on VSYNC.
-	 * CC1 detects when VBI is over and we need to prepare to output active video.
-	 * Interrupt on CC1.
-	 */
-	TIM_TimeBaseInitTypeDef		timb;
-	TIM_OCInitTypeDef			ocnt;
-	NVIC_InitTypeDef			nvic;
-
-	TIM_TimeBaseStructInit(&timb);
-	TIM_OCStructInit(&ocnt);
-	TIM_DeInit(TIM3);
-
-	timb.TIM_Prescaler 			= 0;
-	timb.TIM_CounterMode 		= TIM_CounterMode_Up;
-	timb.TIM_Period 			= 65535;
-	timb.TIM_ClockDivision 		= TIM_CKD_DIV1;
-	TIM_TimeBaseInit(TIM3, &timb);
-
-	ocnt.TIM_OCMode 			= TIM_OCMode_PWM1;
-	ocnt.TIM_Pulse 				= activeVideoLineStart;
-	ocnt.TIM_OutputState 		= TIM_OutputState_Enable;
-	ocnt.TIM_OutputNState 		= TIM_OutputState_Disable;
-	ocnt.TIM_OCPolarity 		= TIM_OCPolarity_High;
-	ocnt.TIM_OCIdleState 		= TIM_OCIdleState_Reset;
-	TIM_OC1Init(TIM3, &ocnt);
-
-	// Interrupt on capture
-	/*
-	nvic.NVIC_IRQChannel 					= TIM3_IRQn;
-	nvic.NVIC_IRQChannelPreemptionPriority 	= 0;
-	nvic.NVIC_IRQChannelSubPriority 		= 0;
-	nvic.NVIC_IRQChannelCmd 				= ENABLE;
-
-	NVIC_Init(&nvic);
-
-	TIM_ITConfig(TIM3, TIM_IT_CC1, ENABLE);
-	*/
-	TIM_SelectSlaveMode(TIM3, TIM_SlaveMode_External1);
-	TIM_SelectInputTrigger(TIM3, TIM_TS_ITR1);	// For TIM3, ITR1 = TIM2 TRGO, p630 reference manual
-}
-
 void initPixelClock()
 {
 	TIM_TimeBaseInitTypeDef		timb;
@@ -214,12 +129,9 @@ void initPixelClock()
 	TIM_TimeBaseInit(TIM8, &timb);
 
 	TIM_SelectSlaveMode(TIM8, TIM_SlaveMode_Trigger);
-	//TIM_SelectInputTrigger(TIM8, TIM_TS_ITR1);		// For TIM8, ITR1 = TIM2 TRGO, p565 reference manual
-
 	TIM_SelectInputTrigger(TIM8, TIM_TS_ETRF);
 	TIM_ETRConfig(TIM8, TIM_ExtTRGPSC_OFF, TIM_ExtTRGPolarity_Inverted, 0);
-
-
+	TIM_SelectOutputTrigger(TIM8, TIM_TRGOSource_Enable);
 	TIM_DMACmd(TIM8, TIM_DMA_Update, ENABLE);
 
 	TIM_OCInitTypeDef			ocnt;
@@ -254,6 +166,50 @@ void initPixelClock()
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM8);
 }
 
+void initHSyncCount()
+{
+	/* Run TIM2 in internally-triggered mode.
+	 * Trigger output from TIM8 (Enable event) clocks the timer.
+	 * Counter is reset on VSYNC.
+	 * CC1 detects when VBI is over and we need to prepare to output active video.
+	 * Interrupt on CC1.
+	 */
+	TIM_TimeBaseInitTypeDef		timb;
+	TIM_OCInitTypeDef			ocnt;
+	NVIC_InitTypeDef			nvic;
+
+	TIM_TimeBaseStructInit(&timb);
+	TIM_OCStructInit(&ocnt);
+	TIM_DeInit(TIM2);
+
+	timb.TIM_Prescaler 			= 0;
+	timb.TIM_CounterMode 		= TIM_CounterMode_Up;
+	timb.TIM_Period 			= 65535;
+	timb.TIM_ClockDivision 		= TIM_CKD_DIV1;
+	TIM_TimeBaseInit(TIM2, &timb);
+
+	ocnt.TIM_OCMode 			= TIM_OCMode_PWM1;
+	ocnt.TIM_Pulse 				= activeVideoLineStart;
+	ocnt.TIM_OutputState 		= TIM_OutputState_Enable;
+	ocnt.TIM_OutputNState 		= TIM_OutputState_Disable;
+	ocnt.TIM_OCPolarity 		= TIM_OCPolarity_High;
+	ocnt.TIM_OCIdleState 		= TIM_OCIdleState_Reset;
+	TIM_OC1Init(TIM2, &ocnt);
+
+	// Interrupt on capture
+	nvic.NVIC_IRQChannel 					= TIM2_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority 	= 0;
+	nvic.NVIC_IRQChannelSubPriority 		= 0;
+	nvic.NVIC_IRQChannelCmd 				= ENABLE;
+
+	NVIC_Init(&nvic);
+
+	TIM_ITConfig(TIM2, TIM_IT_CC1, ENABLE);
+	TIM_SelectSlaveMode(TIM2, TIM_SlaveMode_External1);
+	TIM_SelectInputTrigger(TIM2, TIM_TS_ITR1);	// For TIM2, ITR1 = TIM8 TRGO, p630 reference manual
+	TIM_Cmd(TIM2, ENABLE);
+}
+
 void initPixelDma()
 {
 	NVIC_InitTypeDef nvic;
@@ -268,7 +224,7 @@ void initPixelDma()
 	dmai.DMA_PeripheralBaseAddr 	= (u32)&GPIOF->ODR;
 	dmai.DMA_Memory0BaseAddr 		= (u32)lineBuf0;
 	dmai.DMA_DIR 					= DMA_DIR_MemoryToPeripheral;
-	dmai.DMA_BufferSize 			= pixelsPerLine + 4;
+	dmai.DMA_BufferSize 			= pixelsPerLine + 8;
 	dmai.DMA_PeripheralInc 			= DMA_PeripheralInc_Disable;
 	dmai.DMA_MemoryInc 				= DMA_MemoryInc_Enable;
 	dmai.DMA_PeripheralDataSize 	= DMA_PeripheralDataSize_Byte;
@@ -296,8 +252,8 @@ void initPixelDma()
 void prepareNextScanLine()
 {
 	// Swap buffers
-	//renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
-	//DMA2_Stream1->M0AR = (u32)((renderBuf == lineBuf0) ? lineBuf1 : lineBuf0);
+	renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
+	DMA2_Stream1->M0AR = (u32)((renderBuf == lineBuf0) ? lineBuf1 : lineBuf0);
 
 	// Re-enable DMA for next scanline. NDTR and M0AR will automatically reload to their original values.
 	DMA2_Stream1->CR |= DMA_SxCR_EN;
@@ -307,7 +263,7 @@ void prepareNextScanLine()
 
 	// For now, simply call this function from the interrupt. Later, will want to
 	// do a context switch to it.
-	//rasterizeNextScanLine();
+	rasterizeNextScanLine();
 }
 
 void INTERRUPT DMA2_Stream1_IRQHandler(void)
@@ -325,10 +281,10 @@ void INTERRUPT DMA2_Stream1_IRQHandler(void)
 	prepareNextScanLine();
 }
 
-void INTERRUPT TIM3_IRQHandler(void)
+void INTERRUPT TIM2_IRQHandler(void)
 {
 	// Clear pending interrupt(s)
-	TIM3->SR = 0;
+	TIM2->SR = 0;
 }
 
 void INTERRUPT EXTI2_IRQHandler(void)
@@ -336,41 +292,20 @@ void INTERRUPT EXTI2_IRQHandler(void)
 	// Clear pending interrupts
 	EXTI->PR 	= 0;
 
-	/*
-	TIM3->CR1 	&= (uint16_t)~TIM_CR1_CEN;
-	TIM3->SR 	= 0U;
-	TIM3->CNT 	= 0U;
-	TIM3->DIER 	= (1 << 1);
-	TIM3->CR1  |= TIM_CR1_CEN;
-	*/
-	TIM3->EGR	= TIM_EventSource_Update;
+	// Reset TIM2
+	TIM2->EGR	= TIM_EventSource_Update;
 
 	toggleLed1();
 }
 
 void initVideo()
 {
-	//memset(lineBuf0, 0, sizeof(lineBuf0));
-	//memset(lineBuf1, 0, sizeof(lineBuf1));
-
-	renderBuf = lineBuf0;
-
-	rasterizeNextScanLine();
-
-	//renderBuf = lineBuf1;
-
-	//rasterizeNextScanLine();
-
 	initRCC();
 	initSyncPort();
 	initPixelPort();
-	initHSync();
-	initLineCounter();
+	initHSyncCount();
 	initPixelClock();
 	initPixelDma();
 
 	printf("Video configured\r\n");
-
-	TIM_Cmd(TIM3, ENABLE);
-	TIM_Cmd(TIM2, ENABLE);
 }

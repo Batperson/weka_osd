@@ -23,7 +23,6 @@ void INTERRUPT SysTick_Handler()
 		sysTickBlinkThreshold = sysTicks + blinkInterval;
 		blink = !blink;
 
-		toggleLed1();
 		toggleLed2();
 	}
 }
