@@ -21,8 +21,8 @@ void rasterizeNextScanLine()
 	//memset(renderBuf, 0, LINE_BUFFER_SIZE);
 
 	// For now, just generate a test pattern.
-	PIXEL colourBars[] = { RED, ORANGE, YELLOW, GREEN, PURPLE, BLUE, WHITE, RGBA(0,0,0,1) };
-	PPIXEL pos = renderBuf + 4;
+	PIXEL colourBars[] = { SEMITRANSPARENT, RED, ORANGE, YELLOW, GREEN, PURPLE, BLUE, WHITE, SEMITRANSPARENT  };
+	PPIXEL pos = renderBuf + 40;
 
 	for(u32 i=0; i<sizeof(colourBars); i++)
 	{

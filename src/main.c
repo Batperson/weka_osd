@@ -59,8 +59,10 @@ int main(void)
   initVideoChips();
   initSystem();
 
-  setFastBlankContrastReductionMode(FBContrastReductionDisabled);
-  setFastBlankMode(FBModeDynamic);
+  setFastBlankMode(FBModeDynamicEdgeEnhanced);
+  setFastBlankContrastReductionMode(FBContrastReductionEnabled);
+  setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
+  setFastBlankEdgeShapeLevel(FBEdgeShapeLevel4);
 
   initVideo();
 

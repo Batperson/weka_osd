@@ -28,7 +28,8 @@ typedef u8 PIXEL, *PPIXEL;
 #define INDIGO 				RGB(2,0,1)
 #define VIOLET				RGB(2,0,3)
 
-#define TRANSPARENT			(PIXEL)0
+#define TRANSPARENT			(PIXEL)0x00
+#define SEMITRANSPARENT		(PIXEL)0x80
 
 typedef struct
 {
