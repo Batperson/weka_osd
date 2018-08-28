@@ -249,7 +249,7 @@ void initPixelDma()
 	DMA_Cmd(DMA2_Stream1, ENABLE);
 }
 
-void prepareNextScanLine()
+void IN_CCM prepareNextScanLine()
 {
 	// Swap buffers
 	renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
@@ -266,7 +266,7 @@ void prepareNextScanLine()
 	rasterizeNextScanLine();
 }
 
-void INTERRUPT DMA2_Stream1_IRQHandler(void)
+void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 {
 	// Clear interrupt flags
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1;
@@ -281,13 +281,13 @@ void INTERRUPT DMA2_Stream1_IRQHandler(void)
 	prepareNextScanLine();
 }
 
-void INTERRUPT TIM2_IRQHandler(void)
+void IN_CCM INTERRUPT TIM2_IRQHandler()
 {
 	// Clear pending interrupt(s)
 	TIM2->SR = 0;
 }
 
-void INTERRUPT EXTI2_IRQHandler(void)
+void IN_CCM INTERRUPT EXTI2_IRQHandler()
 {
 	// Clear pending interrupts
 	EXTI->PR 	= 0;

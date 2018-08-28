@@ -10,7 +10,7 @@
 #include "rasterize.h"
 #include "sprite.h"
 
-extern volatile PPIXEL renderBuf IN_CCM;
+extern volatile PPIXEL renderBuf;
 
 SPRITE testpattern;
 
