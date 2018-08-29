@@ -26,11 +26,11 @@
 <stringAttribute key="com.atollic.truestudio.swv.core.datatrace_1" value="Enabled=false:Address=0x0:Access=Read/Write:Size=Word:Function=Data Value"/>
 <stringAttribute key="com.atollic.truestudio.swv.core.datatrace_2" value="Enabled=false:Address=0x0:Access=Read/Write:Size=Word:Function=Data Value"/>
 <stringAttribute key="com.atollic.truestudio.swv.core.datatrace_3" value="Enabled=false:Address=0x0:Access=Read/Write:Size=Word:Function=Data Value"/>
-<stringAttribute key="com.atollic.truestudio.swv.core.itmports" value="1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0"/>
+<stringAttribute key="com.atollic.truestudio.swv.core.itmports" value="1:1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0"/>
 <stringAttribute key="com.atollic.truestudio.swv.core.itmports_priv" value="0:0:0:0"/>
 <stringAttribute key="com.atollic.truestudio.swv.core.pc_sample" value="0:16384"/>
 <stringAttribute key="com.atollic.truestudio.swv.core.timestamps" value="1:1"/>
-<stringAttribute key="com.atollic.truestudio.swv.core.trace_events" value="Cpi=0:Exc=0:Sleep=0:Lsu=0:Fold=0:Exetrc=1"/>
+<stringAttribute key="com.atollic.truestudio.swv.core.trace_events" value="Cpi=0:Exc=0:Sleep=0:Lsu=0:Fold=0:Exetrc=0"/>
 <stringAttribute key="org.eclipse.cdt.dsf.gdb.DEBUG_NAME" value="${TOOLCHAIN_PATH}/arm-atollic-eabi-gdb"/>
 <intAttribute key="org.eclipse.cdt.launch.ATTR_BUILD_BEFORE_LAUNCH_ATTR" value="2"/>
 <stringAttribute key="org.eclipse.cdt.launch.DEBUGGER_REGISTER_GROUPS" value=""/>

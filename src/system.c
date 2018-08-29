@@ -16,7 +16,7 @@ volatile u8 blink;
 
 const u32 blinkInterval = 500;
 
-void INTERRUPT IN_CCM SysTick_Handler()
+void __attribute__((interrupt("IRQ"))) SysTick_Handler()
 {
 	if(++sysTicks >= sysTickBlinkThreshold)
 	{
