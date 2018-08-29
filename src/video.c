@@ -249,7 +249,7 @@ void initPixelDma()
 	DMA_Cmd(DMA2_Stream1, ENABLE);
 }
 
-void prepareNextScanLine()
+void IN_CCM prepareNextScanLine()
 {
 	// Swap buffers
 	renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
@@ -266,7 +266,7 @@ void prepareNextScanLine()
 	rasterizeNextScanLine();
 }
 
-void __attribute__((interrupt("IRQ") /*,section(".ccmram")*/)) DMA2_Stream1_IRQHandler()
+void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 {
 	ITM_Port32(1)					= 1;	// Trace
 	// Clear interrupt flags
@@ -284,13 +284,13 @@ void __attribute__((interrupt("IRQ") /*,section(".ccmram")*/)) DMA2_Stream1_IRQH
 	ITM_Port32(1)					= 5;	// Trace
 }
 
-void __attribute__((interrupt("IRQ"))) TIM2_IRQHandler()
+void INTERRUPT IN_CCM TIM2_IRQHandler()
 {
 	// Clear pending interrupt(s)
 	TIM2->SR = 0;
 }
 
-void __attribute__((interrupt("IRQ"))) EXTI2_IRQHandler()
+void INTERRUPT IN_CCM EXTI2_IRQHandler()
 {
 	// Clear pending interrupts
 	EXTI->PR 	= 0;
