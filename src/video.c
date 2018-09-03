@@ -85,21 +85,20 @@ void initSyncPort()
 	gpio.GPIO_OType 	= GPIO_OType_PP;
 	gpio.GPIO_PuPd 		= GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOA, &gpio);
-/*
+
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource2);
 
 	exti.EXTI_Line 		= EXTI_Line2;
 	exti.EXTI_Mode 		= EXTI_Mode_Interrupt;
 	exti.EXTI_Trigger 	= EXTI_Trigger_Rising;
 	exti.EXTI_LineCmd 	= ENABLE;
-	EXTI_Init(&exti);
+	//EXTI_Init(&exti);	// Currently disabled, is causing SysTick to not work!
 
 	nvic.NVIC_IRQChannel 					= EXTI2_IRQn;
 	nvic.NVIC_IRQChannelPreemptionPriority 	= 1;
 	nvic.NVIC_IRQChannelSubPriority 		= 1;
 	nvic.NVIC_IRQChannelCmd 				= ENABLE;
 	NVIC_Init(&nvic);
-*/
 }
 
 void initPixelPort()

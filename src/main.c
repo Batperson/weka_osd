@@ -63,6 +63,7 @@ int main(void)
   setFastBlankContrastReductionMode(FBContrastReductionEnabled);
   setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
   setFastBlankEdgeShapeLevel(FBEdgeShapeLevel4);
+  setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold1);
 
   initVideo();
 

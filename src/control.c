@@ -224,7 +224,7 @@ void setFastBlankContrastReductionLevel(FBContrastReductionLevelType fbcl)
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL5, v);
 }
 
-void setFastBlankThesholds(FBLevelThresholdType fbl, FBContrastThresholdType fbc)
+void setFastBlankThresholds(FBLevelThresholdType fbl, FBContrastThresholdType fbc)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL5);
 	v = (v & ~(DEC_FBLEVELTHRESHOLD_MASK | DEC_FBCONTRASTTHRESHOLD_MASK)) | (fbl & DEC_FBLEVELTHRESHOLD_MASK) | (fbc & DEC_FBCONTRASTTHRESHOLD_MASK);
