@@ -27,9 +27,6 @@ void IN_CCM SysTick_Handler()
 	}
 }
 
-ALWAYS_INLINE u8 blinkOn() { return blink; }
-ALWAYS_INLINE u32 millis() { return sysTicks; }
-
 void initSystem()
 {
 	sysTicks = 0;

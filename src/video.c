@@ -13,8 +13,8 @@
 #include "graphics.h"
 #include "rasterize.h"
 
-static volatile PIXEL lineBuf0[LINE_BUFFER_SIZE];
-static volatile PIXEL lineBuf1[LINE_BUFFER_SIZE];
+static volatile PIXEL lineBuf0[LINE_BUFFER_SIZE] ALIGNED(1024);
+static volatile PIXEL lineBuf1[LINE_BUFFER_SIZE] ALIGNED(1024);
 volatile PPIXEL renderBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
@@ -61,44 +61,45 @@ void initRCC()
 
 void initSyncPort()
 {
-	EXTI_InitTypeDef exti;
 	GPIO_InitTypeDef gpio;
-	NVIC_InitTypeDef nvic;
+
+	/* Configure PA0 for TIM8 ETR (HSYNC to start pixel clock), datasheet page 62 */
 	GPIO_StructInit(&gpio);
 
-	/* Configure PA0 for Alternate Function 1 (TIM8 ETR), datasheet page 62 */
 	gpio.GPIO_Pin 		= GPIO_Pin_0;
 	gpio.GPIO_Mode 		= GPIO_Mode_AF;
 	gpio.GPIO_Speed 	= GPIO_Speed_50MHz;
 	gpio.GPIO_OType 	= GPIO_OType_PP;
 	gpio.GPIO_PuPd 		= GPIO_PuPd_NOPULL;
 
-	GPIO_Init(GPIOA, &gpio);
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource0, GPIO_AF_TIM8);
+	GPIO_Init(GPIOA, &gpio);
 
-	/* Configure PA2 and PA3 for VSYNC and FIELD */
+	/* Configure PA1 for TIM2 CH2 (This will be VSYNC, to reset the timer) */
+	/* Configure PA5 for TIM2 ETR (External clock, this will be HSYNC to count syncs) */
 	GPIO_StructInit(&gpio);
 
-	gpio.GPIO_Pin 		= GPIO_Pin_2 | GPIO_Pin_3;
+	gpio.GPIO_Pin 		= GPIO_Pin_1 | GPIO_Pin_5;
+	gpio.GPIO_Mode 		= GPIO_Mode_AF;
+	gpio.GPIO_Speed 	= GPIO_Speed_50MHz;
+	gpio.GPIO_OType 	= GPIO_OType_PP;
+	gpio.GPIO_PuPd 		= GPIO_PuPd_NOPULL;
+
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource1, GPIO_AF_TIM2);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource5, GPIO_AF_TIM2);
+	GPIO_Init(GPIOA, &gpio);
+
+
+	/* Configure PA2 as external input (This will be FIELD) */
+	GPIO_StructInit(&gpio);
+
+	gpio.GPIO_Pin 		= GPIO_Pin_2;
 	gpio.GPIO_Mode 		= GPIO_Mode_IN;
 	gpio.GPIO_Speed 	= GPIO_Speed_50MHz;
 	gpio.GPIO_OType 	= GPIO_OType_PP;
 	gpio.GPIO_PuPd 		= GPIO_PuPd_NOPULL;
+
 	GPIO_Init(GPIOA, &gpio);
-
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource2);
-
-	exti.EXTI_Line 		= EXTI_Line2;
-	exti.EXTI_Mode 		= EXTI_Mode_Interrupt;
-	exti.EXTI_Trigger 	= EXTI_Trigger_Rising;
-	exti.EXTI_LineCmd 	= ENABLE;
-	//EXTI_Init(&exti);	// Currently disabled, is causing SysTick to not work!
-
-	nvic.NVIC_IRQChannel 					= EXTI2_IRQn;
-	nvic.NVIC_IRQChannelPreemptionPriority 	= 1;
-	nvic.NVIC_IRQChannelSubPriority 		= 1;
-	nvic.NVIC_IRQChannelCmd 				= ENABLE;
-	NVIC_Init(&nvic);
 }
 
 void initPixelPort()
@@ -116,6 +117,7 @@ void initPixelPort()
 void initPixelClock()
 {
 	TIM_TimeBaseInitTypeDef		timb;
+	TIM_OCInitTypeDef			ocnt;
 
 	TIM_DeInit(TIM8);
 	TIM_TimeBaseStructInit(&timb);
@@ -130,11 +132,10 @@ void initPixelClock()
 	TIM_SelectSlaveMode(TIM8, TIM_SlaveMode_Trigger);
 	TIM_SelectInputTrigger(TIM8, TIM_TS_ETRF);
 	TIM_ETRConfig(TIM8, TIM_ExtTRGPSC_OFF, TIM_ExtTRGPolarity_Inverted, 0);
-	TIM_SelectOutputTrigger(TIM8, TIM_TRGOSource_Enable);
 	TIM_DMACmd(TIM8, TIM_DMA_Update, ENABLE);
 
-	TIM_OCInitTypeDef			ocnt;
-
+	// Test code: toggle a GPIO pin as well, so we can observe pixel output in the logic analyzer
+	// PC6 is TIM8 CH1 alternate function (p63 in datasheet)
 	TIM_OCStructInit(&ocnt);
 
 	ocnt.TIM_OCMode 			= TIM_OCMode_PWM1;
@@ -146,11 +147,8 @@ void initPixelClock()
 	TIM_OC1Init(TIM8, &ocnt);
 
 	TIM_OC1PreloadConfig(TIM8, TIM_OCPreload_Enable);
-
 	TIM_CtrlPWMOutputs(TIM8, ENABLE);
 
-	// Test code: toggle a GPIO pin as well, so we can observe pixel output in the logic analyzer
-	// PC6 is TIM8 CH1 alternate function (p63 in datasheet)
 	GPIO_InitTypeDef gpio;
 	GPIO_StructInit(&gpio);
 
@@ -160,25 +158,26 @@ void initPixelClock()
 	gpio.GPIO_OType = GPIO_OType_PP;
 	gpio.GPIO_PuPd 	= GPIO_PuPd_NOPULL;
 
-	GPIO_Init(GPIOC, &gpio);
-
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM8);
+	GPIO_Init(GPIOC, &gpio);
 }
 
-void initHSyncCount()
+void initLineCount()
 {
-	/* Run TIM2 in internally-triggered mode.
-	 * Trigger output from TIM8 (Enable event) clocks the timer.
-	 * Counter is reset on VSYNC.
+	/* Run TIM2 in external clock mode 2 to count video lines.
+	 * ETR (HSYNC on pin PA5) will increment the timer.
+	 * TI2FP2 (VSYNC on pin PA1) will reset the timer.
 	 * CC1 detects when VBI is over and we need to prepare to output active video.
 	 * Interrupt on CC1.
 	 */
 	TIM_TimeBaseInitTypeDef		timb;
 	TIM_OCInitTypeDef			ocnt;
+	TIM_ICInitTypeDef 			ici;
 	NVIC_InitTypeDef			nvic;
 
 	TIM_TimeBaseStructInit(&timb);
 	TIM_OCStructInit(&ocnt);
+	TIM_ICStructInit(&ici);
 	TIM_DeInit(TIM2);
 
 	timb.TIM_Prescaler 			= 0;
@@ -187,9 +186,27 @@ void initHSyncCount()
 	timb.TIM_ClockDivision 		= TIM_CKD_DIV1;
 	TIM_TimeBaseInit(TIM2, &timb);
 
+	// External clock mode 2, ETR (HSYNC) will be the clock for TIM2
+	TIM_ETRClockMode2Config(TIM2, TIM_ExtTRGPSC_OFF, TIM_ExtTRGPolarity_Inverted, 0);
+
+	// Detect rising edges on Channel 2 (VSYNC)
+	ici.TIM_Channel 		= TIM_Channel_2;
+	ici.TIM_ICPolarity 		= TIM_ICPolarity_Rising;
+	ici.TIM_ICSelection 	= TIM_ICSelection_DirectTI;
+	ici.TIM_ICPrescaler	 	= TIM_ICPSC_DIV1;
+	ici.TIM_ICFilter  		= 0;
+	TIM_ICInit(TIM2, &ici);
+
+	// TI2FP2 Edge detector will be the signal that will reset the timer
+	TIM_SelectInputTrigger(TIM2, TIM_TS_TI2FP2);
+	TIM_SelectSlaveMode(TIM2, TIM_SlaveMode_Reset);
+
+	// OC1 will fire an interrupt when VBI is over
+	// Disable output state as we want this in software only
+	// OC1 shares a pin with ETR which is in use so we don't want to put the pin into output mode
 	ocnt.TIM_OCMode 			= TIM_OCMode_PWM1;
 	ocnt.TIM_Pulse 				= activeVideoLineStart;
-	ocnt.TIM_OutputState 		= TIM_OutputState_Enable;
+	ocnt.TIM_OutputState 		= TIM_OutputState_Disable;
 	ocnt.TIM_OutputNState 		= TIM_OutputState_Disable;
 	ocnt.TIM_OCPolarity 		= TIM_OCPolarity_High;
 	ocnt.TIM_OCIdleState 		= TIM_OCIdleState_Reset;
@@ -203,9 +220,8 @@ void initHSyncCount()
 
 	NVIC_Init(&nvic);
 
-	TIM_ITConfig(TIM2, TIM_IT_CC1, ENABLE);
-	TIM_SelectSlaveMode(TIM2, TIM_SlaveMode_External1);
-	TIM_SelectInputTrigger(TIM2, TIM_TS_ITR1);	// For TIM2, ITR1 = TIM8 TRGO, p630 reference manual
+	TIM_ITConfig(TIM2, TIM_IT_CC3, ENABLE);
+
 	TIM_Cmd(TIM2, ENABLE);
 }
 
@@ -232,7 +248,7 @@ void initPixelDma()
 	dmai.DMA_Priority 				= DMA_Priority_VeryHigh;
 	dmai.DMA_Channel 				= DMA_Channel_7;
 	dmai.DMA_FIFOMode 				= DMA_FIFOMode_Enable;
-	dmai.DMA_FIFOThreshold 			= DMA_FIFOThreshold_Full;
+	dmai.DMA_FIFOThreshold 			= DMA_FIFOThreshold_Full;	// Should this be DMA_FIFOThreshold_1QuarterFull to reduce contention?
 	dmai.DMA_MemoryBurst 			= DMA_MemoryBurst_INC4;
 	dmai.DMA_PeripheralBurst 		= DMA_PeripheralBurst_Single;
 	DMA_Init(DMA2_Stream1, &dmai);
@@ -267,35 +283,25 @@ void IN_CCM prepareNextScanLine()
 
 void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 {
-	ITM_Port32(1)					= 1;	// Trace
+	ITM_Port32(1)					= TIM2->CNT;	// Trace
+
 	// Clear interrupt flags
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1;
 
 	// Disable slave mode, can't stop the timer unless we do this first
 	TIM8->SMCR = 0;
 
-	// Stop TIM8, TIM1 will re-enable it
+	// Stop TIM8, it will be re-enabled by the HS signal
 	TIM8->CR1 = 0;
 	TIM8->EGR = TIM_EventSource_Update;		// Trigger an Update to reset the counter
 
 	prepareNextScanLine();
-
-	ITM_Port32(1)					= 5;	// Trace
 }
 
 void INTERRUPT IN_CCM TIM2_IRQHandler()
 {
 	// Clear pending interrupt(s)
 	TIM2->SR = 0;
-}
-
-void INTERRUPT IN_CCM EXTI2_IRQHandler()
-{
-	// Clear pending interrupts
-	EXTI->PR 	= 0;
-
-	// Reset TIM2
-	TIM2->EGR	= TIM_EventSource_Update;
 
 	toggleLed1();
 }
@@ -305,7 +311,7 @@ void initVideo()
 	initRCC();
 	initSyncPort();
 	initPixelPort();
-	initHSyncCount();
+	initLineCount();
 	initPixelClock();
 	initPixelDma();
 

@@ -7,8 +7,11 @@
 #ifndef SYSTEM_H_
 #define SYSTEM_H_
 
-ALWAYS_INLINE u8 blinkOn();
-ALWAYS_INLINE u32 millis();
+extern volatile u32 sysTicks;
+extern volatile u8 blink;
+
+ALWAYS_INLINE u8 blinkOn() { return blink; }
+ALWAYS_INLINE u32 millis() { return sysTicks; }
 
 void initSystem();
 

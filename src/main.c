@@ -10,11 +10,15 @@
 /*
   Pin and peripheral Usage:
 
-  PA0			HSYNC input
-  PA2			VSYNC input
-  PA3			FIELD input
+  PA0			HSYNC input (pixel start)
+  PA1			VSYNC input
+  PA2			FIELD input
+  PA5			HSYNC input (line count)
+
   PB6-7			I2C SCL and SDA output
+
   PC6			Pixel clock output for debugging
+
   PF0-7			Pixel bus output
   PF9-10		LEDs, active low
 
