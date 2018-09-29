@@ -6,6 +6,7 @@
 #ifndef RASTERIZE_H_
 #define RASTERIZE_H_
 
+void initSprites();
 void rasterizeNextScanLine();
 
 #endif /* RASTERIZE_H_ */

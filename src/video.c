@@ -12,15 +12,21 @@
 #include "video.h"
 #include "graphics.h"
 #include "rasterize.h"
+#include "sprite.h"
+#include "system.h"
+#include "memory.h"
 
 static volatile PIXEL lineBuf0[LINE_BUFFER_SIZE] ALIGNED(1024);
 static volatile PIXEL lineBuf1[LINE_BUFFER_SIZE] ALIGNED(1024);
 volatile PPIXEL renderBuf;
+volatile u16 currentRenderScanLine;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 static const u16 pixelOutputNanoseconds			= 52000;
-static const u16 pixelsPerLine					= 768;			// PAL = 768*576, NTSC = 640*480
+static const u16 pixelsPerLine					= 384;			// PAL = 768*576, NTSC = 640*480
 static const u16 activeVideoLineStart			= 23;			// NTSC starts on line 16?
+
+extern PSPRITE sprites[MAX_SPRITES];
 
 u32 calcNanosecsFromAPB1TimerTicks(u16 ticks)
 {
@@ -133,6 +139,18 @@ void initPixelClock()
 	TIM_SelectInputTrigger(TIM8, TIM_TS_ETRF);
 	TIM_ETRConfig(TIM8, TIM_ExtTRGPSC_OFF, TIM_ExtTRGPolarity_Inverted, 0);
 	TIM_DMACmd(TIM8, TIM_DMA_Update, ENABLE);
+
+	// TODO: Fire an interrupt when pixel output begins, use that to render the line buffer
+	/*
+	NVIC_InitTypeDef			nvic;
+	nvic.NVIC_IRQChannel 					= TIM8_TRG_COM_TIM14_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority 	= 0;
+	nvic.NVIC_IRQChannelSubPriority 		= 0;
+	nvic.NVIC_IRQChannelCmd 				= ENABLE;
+
+	NVIC_Init(&nvic);
+	TIM_ITConfig(TIM8, TIM_IT_Trigger, ENABLE);
+	*/
 
 	// Test code: toggle a GPIO pin as well, so we can observe pixel output in the logic analyzer
 	// PC6 is TIM8 CH1 alternate function (p63 in datasheet)
@@ -264,38 +282,26 @@ void initPixelDma()
 	DMA_Cmd(DMA2_Stream1, ENABLE);
 }
 
-void IN_CCM prepareNextScanLine()
+void IN_CCM rasterizeNextScanLine()
 {
-	// Swap buffers
-	renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
-	DMA2_Stream1->M0AR = (u32)((renderBuf == lineBuf0) ? lineBuf1 : lineBuf0);
+	currentRenderScanLine = currentScanLine() + 1;
+	wordset(renderBuf, 0, LINE_BUFFER_SIZE / 4);
 
-	// Re-enable DMA for next scanline. NDTR and M0AR will automatically reload to their original values.
-	DMA2_Stream1->CR |= DMA_SxCR_EN;
+	u16 visibility = blinkOn() ? SF_BLINKING | SF_VISIBLE : SF_VISIBLE;
 
-	// Re-enable slave mode on TIM8 so that on next TIM2 update, TIM8 starts
-	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF; // TIM_TS_ITR1;
+	PSPRITE ps;
+	for(PSPRITE* pps = sprites; (ps = *pps); pps++)
+	{
+		if(currentRenderScanLine >= ps->rect.top && currentRenderScanLine < (ps->rect.top + ps->rect.height))
+		{
+			if(ps->flags & visibility)
+			{
+				void(*render)(PSPRITE) = ps->renderProc;
 
-	// For now, simply call this function from the interrupt. Later, will want to
-	// do a context switch to it.
-	rasterizeNextScanLine();
-}
-
-void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
-{
-	ITM_Port32(1)					= TIM2->CNT;	// Trace
-
-	// Clear interrupt flags
-	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1;
-
-	// Disable slave mode, can't stop the timer unless we do this first
-	TIM8->SMCR = 0;
-
-	// Stop TIM8, it will be re-enabled by the HS signal
-	TIM8->CR1 = 0;
-	TIM8->EGR = TIM_EventSource_Update;		// Trigger an Update to reset the counter
-
-	prepareNextScanLine();
+				render(ps);
+			}
+		}
+	}
 }
 
 void INTERRUPT IN_CCM TIM2_IRQHandler()
@@ -306,8 +312,37 @@ void INTERRUPT IN_CCM TIM2_IRQHandler()
 	toggleLed1();
 }
 
+void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
+{
+	// Clear interrupt flags
+	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1;
+
+	// Disable slave mode, can't stop the timer unless we do this first
+	TIM8->SMCR = 0;
+
+	// Stop TIM8, it will be re-enabled by the HSYNC signal
+	TIM8->CR1 = 0;
+	TIM8->EGR = TIM_EventSource_Update;		// Trigger an Update to reset the counter
+
+	// Swap buffers
+	renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
+	DMA2_Stream1->M0AR = (u32)((renderBuf == lineBuf0) ? lineBuf1 : lineBuf0);
+
+	// Re-enable DMA for next scanline. NDTR and M0AR will automatically reload to their original values.
+	DMA2_Stream1->CR |= DMA_SxCR_EN;
+
+	// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
+	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
+
+	// For now, simply call this function from the interrupt. Later, will want to
+	// do a context switch to it.
+	rasterizeNextScanLine();
+}
+
 void initVideo()
 {
+	initSpriteFramework();
+	initSprites();
 	initRCC();
 	initSyncPort();
 	initPixelPort();

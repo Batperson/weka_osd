@@ -30,6 +30,8 @@ typedef u8 PIXEL, *PPIXEL;
 
 #define TRANSPARENT			(PIXEL)0x00
 #define SEMITRANSPARENT		(PIXEL)0x80
+#define TRANS 				TRANSPARENT
+#define STRNS				SEMITRANSPARENT
 
 typedef struct
 {
