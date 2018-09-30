@@ -27,13 +27,14 @@
 */
 
 
-/**
-**===========================================================================
-**
-**  Abstract: main program
-**
-**===========================================================================
-*/
+void initDebug()
+{
+	//DBGMCU_APB1PeriphConfig(DBGMCU_TIM8_STOP, ENABLE);
+	//DBGMCU_APB2PeriphConfig(DBGMCU_TIM2_STOP, ENABLE);
+	//DBGMCU_APB2PeriphConfig(DBGMCU_TIM3_STOP, ENABLE);
+	DWT->CTRL |= 1 ;	// Enable CPU cycle counter
+}
+
 int main(void)
 {
 
@@ -51,13 +52,10 @@ int main(void)
   /* NOTE - do we need this? */
   SystemCoreClockUpdate();
 
-  //DBGMCU_APB1PeriphConfig(DBGMCU_TIM8_STOP, ENABLE);
-  //DBGMCU_APB2PeriphConfig(DBGMCU_TIM2_STOP, ENABLE);
-  //DBGMCU_APB2PeriphConfig(DBGMCU_TIM3_STOP, ENABLE);
-
   /* TODO - Add your application code here */
   printf("Initializing hardware...\r\n");
 
+  initDebug();
   initLeds();
   initI2C1();
   initVideoChips();

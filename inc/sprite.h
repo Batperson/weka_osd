@@ -28,16 +28,19 @@ typedef PSPRITEHEADER PSPRITE;
 
 typedef struct
 {
-	SPRITEHEADER header;
-	PIXEL background;
-	PIXEL foreground;
+	SPRITEHEADER hdr;
+	COLOUR background;
+	COLOUR foreground;
 	u8 border;
-} BOXSPRITE, *PBOXSPRITE;
+} BOX, *PBOX;
 
 typedef struct
 {
-	SPRITEHEADER header;
-} BITMAPSPRITE;
+	SPRITEHEADER hdr;
+	COLOUR foreground;
+	COLOUR background;
+	char* sz;
+} LABEL, *PLABEL;
 
 PSPRITE initTestpatternSprite(u16 left, u16 top, u16 width, u16 height);
 

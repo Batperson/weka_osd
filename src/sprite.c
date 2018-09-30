@@ -11,7 +11,6 @@
 #include "memory.h"
 #include "graphics.h"
 #include "video.h"
-#include "rasterize.h"
 #include "system.h"
 #include "sprite.h"
 
@@ -57,7 +56,7 @@ void initSpriteFrameworkTestpattern()
 	}
 }
 
-void renderTestpatternSprite(PSPRITE ps)
+void renderTestpattern(PSPRITE ps)
 {
 	void* pdest = renderBuf + ps->rect.left;
 	u16 l = currentRenderScanLine - ps->rect.top;
@@ -80,31 +79,37 @@ void renderTestpatternSprite(PSPRITE ps)
 	}
 }
 
-void renderBoxSpriteBackground(PBOXSPRITE ps)
+void renderBoxBackground(PBOX ps)
 {
-	void* pdest = renderBuf + ps->header.rect.left;
+	void* pdest = renderBuf + ps->hdr.rect.left;
 
-	memset(pdest, ps->background, ps->header.rect.width);
+	memset(pdest, ps->background, ps->hdr.rect.width);
 }
 
-void renderBoxSprite(PBOXSPRITE ps)
+void renderBox(PBOX ps)
 {
-	void* pdest = renderBuf + ps->header.rect.left;
-	u16 l = currentRenderScanLine - ps->header.rect.top;
+	void* pdest = renderBuf + ps->hdr.rect.left;
+	u16 l = currentRenderScanLine - ps->hdr.rect.top;
 
-	if(l > ps->border && l <= ps->header.rect.height - ps->border)
+	if(l > ps->border && l <= ps->hdr.rect.height - ps->border)
 	{
-		memset(pdest + ps->border, ps->background, ps->header.rect.width - (ps->border * 2));
+		memset(pdest + ps->border, ps->background, ps->hdr.rect.width - (ps->border * 2));
 		memset(pdest, ps->foreground, ps->border);
-		memset(pdest + (ps->header.rect.width - ps->border), ps->foreground, ps->border);
+		memset(pdest + (ps->hdr.rect.width - ps->border), ps->foreground, ps->border);
 	}
 	else
 	{
-		memset(pdest, ps->foreground, ps->header.rect.width);
+		memset(pdest, ps->foreground, ps->hdr.rect.width);
 	}
 }
 
-PSPRITE initTestpatternSprite(u16 left, u16 top, u16 width, u16 height)
+void renderLabel(PLABEL ps)
+{
+	void* pdest = renderBuf + ps->hdr.rect.left;
+	u16 l = currentRenderScanLine - ps->hdr.rect.top;
+}
+
+PSPRITE initTestpattern(u16 left, u16 top, u16 width, u16 height)
 {
 	PSPRITE ps 		= spriteAlloc(sizeof(SPRITE));
 
@@ -113,23 +118,39 @@ PSPRITE initTestpatternSprite(u16 left, u16 top, u16 width, u16 height)
 	ps->rect.top	= top;
 	ps->rect.width	= width;
 	ps->rect.height	= height;
-	ps->renderProc	= renderTestpatternSprite;
+	ps->renderProc	= renderTestpattern;
 
 	return ps;
 }
 
-PSPRITE initBoxSprite(u16 left, u16 top, u16 width, u16 height, PIXEL foreground, PIXEL background, u8 border)
+PSPRITE initBox(u16 left, u16 top, u16 width, u16 height, PIXEL foreground, PIXEL background, u8 border)
 {
-	PBOXSPRITE ps 			= (PBOXSPRITE)spriteAlloc(sizeof(BOXSPRITE));
-	ps->header.flags 		= SF_VISIBLE;
-	ps->header.rect.left 	= left;
-	ps->header.rect.top		= top;
-	ps->header.rect.width	= width;
-	ps->header.rect.height	= height;
-	ps->header.renderProc	= (border > 0 && foreground != background) ? renderBoxSprite : renderBoxSpriteBackground;
+	PBOX ps 				= (PBOX)spriteAlloc(sizeof(BOX));
+	ps->hdr.flags 			= SF_VISIBLE;
+	ps->hdr.rect.left 		= left;
+	ps->hdr.rect.top		= top;
+	ps->hdr.rect.width		= width;
+	ps->hdr.rect.height		= height;
+	ps->hdr.renderProc		= (border > 0 && foreground != background) ? renderBox : renderBoxBackground;
 	ps->foreground			= foreground;
 	ps->background			= background;
 	ps->border				= border;
+
+	return (PSPRITE)ps;
+}
+
+PSPRITE initLabel(u16 left, u16 top, u16 width, u16 height, PIXEL foreground, PIXEL background, char* sz)
+{
+	PLABEL ps 				= (PLABEL)spriteAlloc(sizeof(LABEL));
+	ps->hdr.flags 			= SF_VISIBLE;
+	ps->hdr.rect.left 		= left;
+	ps->hdr.rect.top		= top;
+	ps->hdr.rect.width		= width;
+	ps->hdr.rect.height		= height;
+	ps->hdr.renderProc		= renderLabel;
+	ps->foreground			= foreground;
+	ps->background			= background;
+	ps->sz					= sz;
 
 	return (PSPRITE)ps;
 }
@@ -145,7 +166,7 @@ void initSprites()
 {
 	memset(sprites, 0, sizeof(sprites));
 
-	sprites[0] 	= initTestpatternSprite(60, 60, 100, 100);
+	sprites[0] 	= initTestpattern(60, 60, 100, 100);
 }
 
 

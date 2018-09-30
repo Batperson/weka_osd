@@ -7,6 +7,8 @@
 #define GRAPHICS_H_
 
 typedef u8 PIXEL, *PPIXEL;
+typedef PIXEL COLOUR;
+
 #define RGBA(r,g,b,a) 		((PIXEL)(a<<6)|(r<<4)|(g<<2)|b)
 #define RGB(r,g,b) 			RGBA(r,g,b,3)
 #define RED					RGB(3,0,0)

@@ -11,7 +11,6 @@
 #include "control.h"
 #include "video.h"
 #include "graphics.h"
-#include "rasterize.h"
 #include "sprite.h"
 #include "system.h"
 #include "memory.h"
@@ -139,18 +138,6 @@ void initPixelClock()
 	TIM_SelectInputTrigger(TIM8, TIM_TS_ETRF);
 	TIM_ETRConfig(TIM8, TIM_ExtTRGPSC_OFF, TIM_ExtTRGPolarity_Inverted, 0);
 	TIM_DMACmd(TIM8, TIM_DMA_Update, ENABLE);
-
-	// TODO: Fire an interrupt when pixel output begins, use that to render the line buffer
-	/*
-	NVIC_InitTypeDef			nvic;
-	nvic.NVIC_IRQChannel 					= TIM8_TRG_COM_TIM14_IRQn;
-	nvic.NVIC_IRQChannelPreemptionPriority 	= 0;
-	nvic.NVIC_IRQChannelSubPriority 		= 0;
-	nvic.NVIC_IRQChannelCmd 				= ENABLE;
-
-	NVIC_Init(&nvic);
-	TIM_ITConfig(TIM8, TIM_IT_Trigger, ENABLE);
-	*/
 
 	// Test code: toggle a GPIO pin as well, so we can observe pixel output in the logic analyzer
 	// PC6 is TIM8 CH1 alternate function (p63 in datasheet)
@@ -284,6 +271,9 @@ void initPixelDma()
 
 void IN_CCM rasterizeNextScanLine()
 {
+	// Reset the CPU cycle counter
+	DWT->CYCCNT = 0; 
+
 	currentRenderScanLine = currentScanLine() + 1;
 	wordset(renderBuf, 0, LINE_BUFFER_SIZE / 4);
 
@@ -302,6 +292,9 @@ void IN_CCM rasterizeNextScanLine()
 			}
 		}
 	}
+
+	// Trace out the number of cycles used to render the current scanline.
+	ITM_Port32(1)	= DWT->CYCCNT;
 }
 
 void INTERRUPT IN_CCM TIM2_IRQHandler()
