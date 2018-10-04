@@ -5,6 +5,7 @@
  */
 
 #include "stm32f4xx.h"
+#include "bitband.h"
 #include "stdlib.h"
 #include "string.h"
 #include "misc.h"
@@ -58,11 +59,14 @@ void initSpriteFrameworkTestpattern()
 
 void renderTestpattern(PSPRITE ps)
 {
+	const u16 bandHeight = 10;
+
 	void* pdest = renderBuf + ps->rect.left;
 	u16 l = currentRenderScanLine - ps->rect.top;
-	u16 k = (l / 10) % 4;
+	u16 k = (l / bandHeight) % 4;
+	u16 z = (l % bandHeight) ? 0 : 10;
 
-	switch(k)
+	switch(k * z)
 	{
 	case 0:
 		tilecpy(pdest, test1, ps->rect.width, sizeof(test1));
@@ -70,11 +74,20 @@ void renderTestpattern(PSPRITE ps)
 	case 1:
 		tilecpy(pdest, test2, ps->rect.width, sizeof(test2));
 		break;
+	case 10:
+		memset(pdest, RED, ps->rect.width);
+		break;
 	case 2:
 		tilecpy(pdest, test3, ps->rect.width, sizeof(test3));
 		break;
+	case 20:
+		memset(pdest, GREEN, ps->rect.width);
+		break;
 	case 3:
 		tilecpy(pdest, test4, ps->rect.width, sizeof(test4));
+		break;
+	case 30:
+		memset(pdest, BLUE, ps->rect.width);
 		break;
 	}
 }
@@ -83,7 +96,7 @@ void renderBoxBackground(PBOX ps)
 {
 	void* pdest = renderBuf + ps->hdr.rect.left;
 
-	memset(pdest, ps->background, ps->hdr.rect.width);
+	memset(pdest, ps->hdr.background, ps->hdr.rect.width);
 }
 
 void renderBox(PBOX ps)
@@ -93,64 +106,122 @@ void renderBox(PBOX ps)
 
 	if(l > ps->border && l <= ps->hdr.rect.height - ps->border)
 	{
-		memset(pdest + ps->border, ps->background, ps->hdr.rect.width - (ps->border * 2));
-		memset(pdest, ps->foreground, ps->border);
-		memset(pdest + (ps->hdr.rect.width - ps->border), ps->foreground, ps->border);
+		memset(pdest + ps->border, ps->hdr.background, ps->hdr.rect.width - (ps->border * 2));
+		memset(pdest, ps->hdr.foreground, ps->border);
+		memset(pdest + (ps->hdr.rect.width - ps->border), ps->hdr.foreground, ps->border);
 	}
 	else
 	{
-		memset(pdest, ps->foreground, ps->hdr.rect.width);
+		memset(pdest, ps->hdr.foreground, ps->hdr.rect.width);
+	}
+}
+
+void renderBitmapBox(PBITMAPBOX ps)
+{
+
+}
+
+void renderReticle(PRETICLE ps)
+{
+	void* pdest = renderBuf + ps->hdr.rect.left;
+	u16 l = currentRenderScanLine - ps->hdr.rect.top;
+
+	if(l < ps->width || l >= ps->hdr.rect.height - ps->width)
+	{
+		memset(pdest, ps->hdr.foreground, ps->hdr.rect.width);
+	}
+	else if(l < ps->extent || l >= ps->hdr.rect.height - ps->extent)
+	{
+		byteset(pdest, ps->hdr.foreground, ps->width);
+		byteset((pdest + ps->hdr.rect.width) - ps->width, ps->hdr.foreground, ps->width);
 	}
 }
 
 void renderLabel(PLABEL ps)
 {
-	void* pdest = renderBuf + ps->hdr.rect.left;
-	u16 l = currentRenderScanLine - ps->hdr.rect.top;
+	PFONT pfont 	= ps->font;
+	PPIXEL pdest 	= renderBuf + ps->hdr.rect.left;
+	PPIXEL pend		= pdest + ps->hdr.rect.width;
+	u16 y 			= currentRenderScanLine - ps->hdr.rect.top / ps->scale;
+
+	if(ps->hdr.background != TRANSPARENT)
+		memset(pdest, ps->hdr.background, ps->hdr.rect.width);
+
+	if(y <= pfont->charheight)
+	{
+		int cx		= pfont->charwidth * ps->scale;
+
+		for(u8* p = ps->text; *p != 0; p++)
+		{
+			u8* psrc  	= pfont->data + ((*p-32) * pfont->charheight * pfont->charbytes) + y;
+			for(int j=0; j<cx; j++)
+			{
+				if(BITBAND_ACCESS(psrc, 7-(j / ps->scale)))
+					*pdest = ps->hdr.foreground;
+				if(++pdest >= pend)
+					return;
+			}
+		}
+	}
 }
 
-PSPRITE initTestpattern(u16 left, u16 top, u16 width, u16 height)
+PSPRITE initSpriteHeader(PSPRITE ps, u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u16 flags)
 {
-	PSPRITE ps 		= spriteAlloc(sizeof(SPRITE));
-
-	ps->flags 		= SF_VISIBLE;
+	ps->flags 		= flags;
 	ps->rect.left 	= left;
 	ps->rect.top	= top;
 	ps->rect.width	= width;
 	ps->rect.height	= height;
+	ps->foreground	= foreground;
+	ps->background	= background;
+
+	return ps;
+}
+
+PSPRITE newTestpattern(u16 left, u16 top, u16 width, u16 height)
+{
+	PSPRITE ps 		= initSpriteHeader(spriteAlloc(sizeof(SPRITE)), left, top, width, height, TRANSPARENT, TRANSPARENT, SF_VISIBLE);
 	ps->renderProc	= renderTestpattern;
 
 	return ps;
 }
 
-PSPRITE initBox(u16 left, u16 top, u16 width, u16 height, PIXEL foreground, PIXEL background, u8 border)
+PSPRITE newBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 border)
 {
-	PBOX ps 				= (PBOX)spriteAlloc(sizeof(BOX));
-	ps->hdr.flags 			= SF_VISIBLE;
-	ps->hdr.rect.left 		= left;
-	ps->hdr.rect.top		= top;
-	ps->hdr.rect.width		= width;
-	ps->hdr.rect.height		= height;
+	PBOX ps 				= (PBOX)initSpriteHeader(spriteAlloc(sizeof(BOX)), left, top, width, height, foreground, background, SF_VISIBLE);
 	ps->hdr.renderProc		= (border > 0 && foreground != background) ? renderBox : renderBoxBackground;
-	ps->foreground			= foreground;
-	ps->background			= background;
 	ps->border				= border;
 
 	return (PSPRITE)ps;
 }
 
-PSPRITE initLabel(u16 left, u16 top, u16 width, u16 height, PIXEL foreground, PIXEL background, char* sz)
+PSPRITE newReticle(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, u8 lineWidth, u8 lineExtent)
 {
-	PLABEL ps 				= (PLABEL)spriteAlloc(sizeof(LABEL));
-	ps->hdr.flags 			= SF_VISIBLE;
-	ps->hdr.rect.left 		= left;
-	ps->hdr.rect.top		= top;
-	ps->hdr.rect.width		= width;
-	ps->hdr.rect.height		= height;
+	PRETICLE ps 			= (PRETICLE)initSpriteHeader(spriteAlloc(sizeof(BOX)), left, top, width, height, foreground, TRANSPARENT, SF_VISIBLE);
+	ps->hdr.renderProc		= renderReticle;
+	ps->width				= lineWidth;
+	ps->extent				= lineExtent;
+
+	return (PSPRITE)ps;
+}
+
+PSPRITE newBitmapBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, PBITMAP bitmap)
+{
+	PBITMAPBOX ps 			= (PBITMAPBOX)initSpriteHeader(spriteAlloc(sizeof(BITMAPBOX)), left, top, width, height, foreground, background, SF_VISIBLE);
+	ps->hdr.renderProc		= renderBitmapBox;
+	ps->bitmap				= bitmap;
+
+	return (PSPRITE)ps;
+}
+
+PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 scale, u8 xoffset, u8 yoffset, u8* text)
+{
+	PLABEL ps 				= (PLABEL)initSpriteHeader(spriteAlloc(sizeof(LABEL)), left, top, width, height, foreground, background, SF_VISIBLE);
 	ps->hdr.renderProc		= renderLabel;
-	ps->foreground			= foreground;
-	ps->background			= background;
-	ps->sz					= sz;
+	ps->scale				= scale;
+	ps->xoffset				= xoffset;
+	ps->yoffset				= yoffset;
+	ps->text				= text;
 
 	return (PSPRITE)ps;
 }
@@ -162,11 +233,14 @@ void initSpriteFramework()
 }
 
 // Instance initialization here. In the future this will come from persisted state.
+u8 weka[] = { "WekaOSD!" };
 void initSprites()
 {
 	memset(sprites, 0, sizeof(sprites));
 
-	sprites[0] 	= initTestpattern(60, 60, 100, 100);
+	sprites[0] 	= newTestpattern(60, 60, 100, 100);
+	sprites[1] 	= newReticle(200, 200, 20, 20, MAGENTA, 1, 6);
+	sprites[2] 	= newLabel(180, 120, 40, 10, RED, TRANSPARENT, 1, 0, 0, weka);
 }
 
 

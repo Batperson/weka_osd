@@ -49,4 +49,29 @@ typedef struct
 	u16 height;
 } RECT, *PRECT;
 
+typedef struct
+{
+	u8 	charwidth;
+	u8 	charheight;
+	u8 	charbytes;
+	u8* data;
+} FONT, *PFONT;
+
+typedef enum
+{
+	BF_NONE		= 0x00,
+	BF_BPP_1	= 0x01,
+	BF_BPP_2	= 0x02,
+	BF_BPP_4	= 0x03,
+	BF_BPP_8	= 0x04
+} BitmapFlagsType;
+
+typedef struct
+{
+	u16	width;
+	u16 height;
+	u16 flags;
+	u8* data;
+} BITMAP, *PBITMAP;
+
 #endif /* GRAPHICS_H_ */

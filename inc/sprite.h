@@ -20,6 +20,8 @@ typedef struct
 {
 	u16 					flags;
 	RECT 					rect;
+	COLOUR 			background;
+	COLOUR 			foreground;
 	void*					renderProc;
 } SPRITEHEADER, *PSPRITEHEADER;
 
@@ -28,21 +30,38 @@ typedef PSPRITEHEADER PSPRITE;
 
 typedef struct
 {
-	SPRITEHEADER hdr;
-	COLOUR background;
-	COLOUR foreground;
-	u8 border;
+	SPRITEHEADER 	hdr;
+	u8 				border;
 } BOX, *PBOX;
 
 typedef struct
 {
-	SPRITEHEADER hdr;
-	COLOUR foreground;
-	COLOUR background;
-	char* sz;
+	SPRITEHEADER 	hdr;
+	u8 				width;
+	u8				extent;
+} RETICLE, *PRETICLE;
+
+typedef struct
+{
+	SPRITEHEADER 	hdr;
+	PFONT 			font;
+	u8				scale;
+	u8				xoffset;
+	u8				yoffset;
+	u8* 			text;
 } LABEL, *PLABEL;
 
-PSPRITE initTestpatternSprite(u16 left, u16 top, u16 width, u16 height);
+typedef struct
+{
+	SPRITEHEADER 	hdr;
+	PBITMAP			bitmap;
+} BITMAPBOX, *PBITMAPBOX;
+
+PSPRITE newTestpattern(u16 left, u16 top, u16 width, u16 height);
+PSPRITE newBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 border);
+PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 scale, u8 xoffset, u8 yoffset, u8* text);
+PSPRITE newBitmapBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, PBITMAP bitmap);
+PSPRITE newReticle(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, u8 lineWidth, u8 lineExtent);
 
 void initSpriteFramework();
 void initSprites();

@@ -276,6 +276,7 @@ void IN_CCM rasterizeNextScanLine()
 
 	currentRenderScanLine = currentScanLine() + 1;
 	wordset(renderBuf, 0, LINE_BUFFER_SIZE / 4);
+	//bzero(renderBuf, LINE_BUFFER_SIZE);
 
 	u16 visibility = blinkOn() ? SF_BLINKING | SF_VISIBLE : SF_VISIBLE;
 
