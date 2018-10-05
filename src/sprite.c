@@ -17,6 +17,7 @@
 
 extern volatile PPIXEL renderBuf;
 extern volatile u16 currentRenderScanLine;
+extern FONT systemFont;
 
 PSPRITE sprites[MAX_SPRITES];
 
@@ -64,7 +65,7 @@ void renderTestpattern(PSPRITE ps)
 	void* pdest = renderBuf + ps->rect.left;
 	u16 l = currentRenderScanLine - ps->rect.top;
 	u16 k = (l / bandHeight) % 4;
-	u16 z = (l % bandHeight) ? 0 : 10;
+	u16 z = (l % bandHeight) ? 1 : 10;
 
 	switch(k * z)
 	{
@@ -121,14 +122,15 @@ void renderBitmapBox(PBITMAPBOX ps)
 
 }
 
-void renderReticle(PRETICLE ps)
+void renderBracket(PBRACKET ps)
 {
 	void* pdest = renderBuf + ps->hdr.rect.left;
 	u16 l = currentRenderScanLine - ps->hdr.rect.top;
 
 	if(l < ps->width || l >= ps->hdr.rect.height - ps->width)
 	{
-		memset(pdest, ps->hdr.foreground, ps->hdr.rect.width);
+		byteset(pdest, ps->hdr.foreground, ps->extent);
+		byteset((pdest + ps->hdr.rect.width) - ps->extent, ps->hdr.foreground, ps->extent);
 	}
 	else if(l < ps->extent || l >= ps->hdr.rect.height - ps->extent)
 	{
@@ -142,7 +144,7 @@ void renderLabel(PLABEL ps)
 	PFONT pfont 	= ps->font;
 	PPIXEL pdest 	= renderBuf + ps->hdr.rect.left;
 	PPIXEL pend		= pdest + ps->hdr.rect.width;
-	u16 y 			= currentRenderScanLine - ps->hdr.rect.top / ps->scale;
+	u16 y 			= (currentRenderScanLine - ps->hdr.rect.top) / ps->scale;
 
 	if(ps->hdr.background != TRANSPARENT)
 		memset(pdest, ps->hdr.background, ps->hdr.rect.width);
@@ -156,7 +158,7 @@ void renderLabel(PLABEL ps)
 			u8* psrc  	= pfont->data + ((*p-32) * pfont->charheight * pfont->charbytes) + y;
 			for(int j=0; j<cx; j++)
 			{
-				if(BITBAND_ACCESS(psrc, 7-(j / ps->scale)))
+				if(*BITBAND_PTR(psrc, 7-(j / ps->scale)))
 					*pdest = ps->hdr.foreground;
 				if(++pdest >= pend)
 					return;
@@ -195,10 +197,10 @@ PSPRITE newBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLO
 	return (PSPRITE)ps;
 }
 
-PSPRITE newReticle(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, u8 lineWidth, u8 lineExtent)
+PSPRITE newBracket(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, u8 lineWidth, u8 lineExtent)
 {
-	PRETICLE ps 			= (PRETICLE)initSpriteHeader(spriteAlloc(sizeof(BOX)), left, top, width, height, foreground, TRANSPARENT, SF_VISIBLE);
-	ps->hdr.renderProc		= renderReticle;
+	PBRACKET ps 			= (PBRACKET)initSpriteHeader(spriteAlloc(sizeof(BRACKET)), left, top, width, height, foreground, TRANSPARENT, SF_VISIBLE);
+	ps->hdr.renderProc		= renderBracket;
 	ps->width				= lineWidth;
 	ps->extent				= lineExtent;
 
@@ -214,14 +216,15 @@ PSPRITE newBitmapBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground
 	return (PSPRITE)ps;
 }
 
-PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 scale, u8 xoffset, u8 yoffset, u8* text)
+PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 scale, PFONT font, u8* text)
 {
 	PLABEL ps 				= (PLABEL)initSpriteHeader(spriteAlloc(sizeof(LABEL)), left, top, width, height, foreground, background, SF_VISIBLE);
 	ps->hdr.renderProc		= renderLabel;
 	ps->scale				= scale;
-	ps->xoffset				= xoffset;
-	ps->yoffset				= yoffset;
+	ps->xoffset				= 0;
+	ps->yoffset				= 0;
 	ps->text				= text;
+	ps->font				= font;
 
 	return (PSPRITE)ps;
 }
@@ -233,14 +236,16 @@ void initSpriteFramework()
 }
 
 // Instance initialization here. In the future this will come from persisted state.
-u8 weka[] = { "WekaOSD!" };
+u8 weka[] = { "WEKA OSD!" };	// System font is incomplete, most lower case is missing
 void initSprites()
 {
 	memset(sprites, 0, sizeof(sprites));
 
 	sprites[0] 	= newTestpattern(60, 60, 100, 100);
-	sprites[1] 	= newReticle(200, 200, 20, 20, MAGENTA, 1, 6);
-	sprites[2] 	= newLabel(180, 120, 40, 10, RED, TRANSPARENT, 1, 0, 0, weka);
+	sprites[1] 	= newBracket(200, 200, 20, 20, YELLOW, 1, 6);
+	sprites[2] 	= newLabel(180, 120, 120, 50, YELLOW, TRANSPARENT, 2, &systemFont, weka);
+
+	sprites[2]->flags |= SF_BLINKING;
 }
 
 

@@ -51,11 +51,14 @@ int main(void)
 
   /* NOTE - do we need this? */
   SystemCoreClockUpdate();
+  initDebug();
 
   /* TODO - Add your application code here */
   printf("Initializing hardware...\r\n");
 
-  initDebug();
+  /* Give the chips a chance to fully power up */
+  sleep(500);
+
   initLeds();
   initI2C1();
   initVideoChips();

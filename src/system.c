@@ -14,7 +14,14 @@ volatile u32 sysTicks;
 volatile u32 sysTickBlinkThreshold;
 volatile u8 blink;
 
-const u32 blinkInterval = 500;
+const u32 blinkInterval = 300;
+
+void sleep(u32 millisecs)
+{
+	u32 cyccnt = DWT->CYCCNT + (SystemCoreClock / (1000000 / millisecs));
+	while(DWT->CYCCNT < cyccnt)
+		;
+}
 
 void IN_CCM SysTick_Handler()
 {

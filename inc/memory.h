@@ -8,6 +8,8 @@
 #ifndef MEMORY_H_
 #define MEMORY_H_
 
+void zerobuf(void*, size_t);
+
 ALWAYS_INLINE void byteset(u8* pd, u8 val, size_t n)
 {
 	for(u8* pe = pd+n; pd < pe; pd++)

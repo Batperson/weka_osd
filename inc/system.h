@@ -10,6 +10,7 @@
 extern volatile u32 sysTicks;
 extern volatile u8 blink;
 
+void sleep(u32 millisecs);
 ALWAYS_INLINE u8 blinkOn() { return blink; }
 ALWAYS_INLINE u32 millis() { return sysTicks; }
 

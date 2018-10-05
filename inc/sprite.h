@@ -18,11 +18,11 @@ typedef enum
 
 typedef struct
 {
-	u16 					flags;
-	RECT 					rect;
-	COLOUR 			background;
-	COLOUR 			foreground;
-	void*					renderProc;
+	u16 				flags;
+	RECT 				rect;
+	COLOUR 				background;
+	COLOUR 				foreground;
+	void*				renderProc;
 } SPRITEHEADER, *PSPRITEHEADER;
 
 typedef SPRITEHEADER SPRITE;
@@ -39,7 +39,7 @@ typedef struct
 	SPRITEHEADER 	hdr;
 	u8 				width;
 	u8				extent;
-} RETICLE, *PRETICLE;
+} BRACKET, *PBRACKET;
 
 typedef struct
 {
@@ -59,9 +59,9 @@ typedef struct
 
 PSPRITE newTestpattern(u16 left, u16 top, u16 width, u16 height);
 PSPRITE newBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 border);
-PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 scale, u8 xoffset, u8 yoffset, u8* text);
+PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 scale, PFONT font, u8* text);
 PSPRITE newBitmapBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, PBITMAP bitmap);
-PSPRITE newReticle(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, u8 lineWidth, u8 lineExtent);
+PSPRITE newBracket(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, u8 lineWidth, u8 lineExtent);
 
 void initSpriteFramework();
 void initSprites();

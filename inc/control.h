@@ -126,22 +126,22 @@ typedef enum {
 
 ALWAYS_INLINE void setLed1 (LEDStatusType status)
 {
-	BITBAND_ACCESS(GPIOF->ODR, 9) = status;
+	OUTPUT_PIN(GPIOF, 9) = status;
 }
 
 ALWAYS_INLINE void setLed2(LEDStatusType status)
 {
-	BITBAND_ACCESS(GPIOF->ODR, 10) = status;
+	OUTPUT_PIN(GPIOF, 10) = status;
 }
 
 ALWAYS_INLINE void toggleLed1()
 {
-	BITBAND_ACCESS(GPIOF->ODR, 9) = !BITBAND_ACCESS(GPIOF->ODR, 9);
+	OUTPUT_PIN(GPIOF, 9) = !OUTPUT_PIN(GPIOF, 9);
 }
 
 ALWAYS_INLINE void toggleLed2()
 {
-	BITBAND_ACCESS(GPIOF->ODR, 10) = !BITBAND_ACCESS(GPIOF->ODR, 10);
+	OUTPUT_PIN(GPIOF, 10) = !OUTPUT_PIN(GPIOF, 10);
 }
 
 #endif /* CONTROL_H_ */

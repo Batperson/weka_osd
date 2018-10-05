@@ -15,6 +15,8 @@
 #include "system.h"
 #include "memory.h"
 
+#define LINE_BUFFER_SIZE	816
+
 static volatile PIXEL lineBuf0[LINE_BUFFER_SIZE] ALIGNED(1024);
 static volatile PIXEL lineBuf1[LINE_BUFFER_SIZE] ALIGNED(1024);
 volatile PPIXEL renderBuf;
@@ -275,17 +277,15 @@ void IN_CCM rasterizeNextScanLine()
 	DWT->CYCCNT = 0; 
 
 	currentRenderScanLine = currentScanLine() + 1;
-	wordset(renderBuf, 0, LINE_BUFFER_SIZE / 4);
-	//bzero(renderBuf, LINE_BUFFER_SIZE);
 
-	u16 visibility = blinkOn() ? SF_BLINKING | SF_VISIBLE : SF_VISIBLE;
+	zerobuf(renderBuf, LINE_BUFFER_SIZE);
 
 	PSPRITE ps;
 	for(PSPRITE* pps = sprites; (ps = *pps); pps++)
 	{
 		if(currentRenderScanLine >= ps->rect.top && currentRenderScanLine < (ps->rect.top + ps->rect.height))
 		{
-			if(ps->flags & visibility)
+			if((ps->flags & (SF_VISIBLE | SF_BLINKING)) == SF_VISIBLE || blinkOn())
 			{
 				void(*render)(PSPRITE) = ps->renderProc;
 
