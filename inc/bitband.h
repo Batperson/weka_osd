@@ -6,8 +6,6 @@
 #ifndef BITBAND_H_
 #define BITBAND_H_
 
-#define BITBAND_ADDR 0x20000000
-
 #define BITBAND_ADDRESS(_item,_bitNumber)\
     (u8*)((((u32)(&(_item))) & 0x60000000)\
     + 0x2000000\

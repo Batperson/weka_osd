@@ -57,7 +57,7 @@ int main(void)
   printf("Initializing hardware...\r\n");
 
   /* Give the chips a chance to fully power up */
-  sleep(500);
+  sleep(1000);
 
   initLeds();
   initI2C1();

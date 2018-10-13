@@ -1,6 +1,6 @@
 /*
  * video.c
- *
+ * Low-level video routines interacting with the hardware, including scanout and line counting
  */
 
 #include "stm32f4xx.h"
@@ -15,7 +15,7 @@
 #include "system.h"
 #include "memory.h"
 
-#define LINE_BUFFER_SIZE	816
+#define LINE_BUFFER_SIZE	384
 
 static volatile PIXEL lineBuf0[LINE_BUFFER_SIZE] ALIGNED(1024);
 static volatile PIXEL lineBuf1[LINE_BUFFER_SIZE] ALIGNED(1024);
@@ -24,7 +24,7 @@ volatile u16 currentRenderScanLine;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 static const u16 pixelOutputNanoseconds			= 52000;
-static const u16 pixelsPerLine					= 384;			// PAL = 768*576, NTSC = 640*480
+static const u16 pixelsPerLine					= 380;			// PAL = 768*576, NTSC = 640*480
 static const u16 activeVideoLineStart			= 23;			// NTSC starts on line 16?
 
 extern PSPRITE sprites[MAX_SPRITES];
@@ -124,7 +124,6 @@ void initPixelPort()
 void initPixelClock()
 {
 	TIM_TimeBaseInitTypeDef		timb;
-	TIM_OCInitTypeDef			ocnt;
 
 	TIM_DeInit(TIM8);
 	TIM_TimeBaseStructInit(&timb);
@@ -140,33 +139,6 @@ void initPixelClock()
 	TIM_SelectInputTrigger(TIM8, TIM_TS_ETRF);
 	TIM_ETRConfig(TIM8, TIM_ExtTRGPSC_OFF, TIM_ExtTRGPolarity_Inverted, 0);
 	TIM_DMACmd(TIM8, TIM_DMA_Update, ENABLE);
-
-	// Test code: toggle a GPIO pin as well, so we can observe pixel output in the logic analyzer
-	// PC6 is TIM8 CH1 alternate function (p63 in datasheet)
-	TIM_OCStructInit(&ocnt);
-
-	ocnt.TIM_OCMode 			= TIM_OCMode_PWM1;
-	ocnt.TIM_Pulse 				= calcAPB2TimerPeriod(pixelOutputNanoseconds / pixelsPerLine) / 2;
-	ocnt.TIM_OutputState 		= TIM_OutputState_Enable;
-	ocnt.TIM_OutputNState 		= TIM_OutputState_Disable;
-	ocnt.TIM_OCPolarity 		= TIM_OCPolarity_Low;
-	ocnt.TIM_OCIdleState 		= TIM_OCIdleState_Reset;
-	TIM_OC1Init(TIM8, &ocnt);
-
-	TIM_OC1PreloadConfig(TIM8, TIM_OCPreload_Enable);
-	TIM_CtrlPWMOutputs(TIM8, ENABLE);
-
-	GPIO_InitTypeDef gpio;
-	GPIO_StructInit(&gpio);
-
-	gpio.GPIO_Pin 	= GPIO_Pin_6;
-	gpio.GPIO_Mode 	= GPIO_Mode_AF;
-	gpio.GPIO_Speed = GPIO_Speed_50MHz;
-	gpio.GPIO_OType = GPIO_OType_PP;
-	gpio.GPIO_PuPd 	= GPIO_PuPd_NOPULL;
-
-	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM8);
-	GPIO_Init(GPIOC, &gpio);
 }
 
 void initLineCount()
@@ -246,7 +218,7 @@ void initPixelDma()
 	dmai.DMA_PeripheralBaseAddr 	= (u32)&GPIOF->ODR;
 	dmai.DMA_Memory0BaseAddr 		= (u32)lineBuf0;
 	dmai.DMA_DIR 					= DMA_DIR_MemoryToPeripheral;
-	dmai.DMA_BufferSize 			= pixelsPerLine + 8;
+	dmai.DMA_BufferSize 			= pixelsPerLine + 4;
 	dmai.DMA_PeripheralInc 			= DMA_PeripheralInc_Disable;
 	dmai.DMA_MemoryInc 				= DMA_MemoryInc_Enable;
 	dmai.DMA_PeripheralDataSize 	= DMA_PeripheralDataSize_Byte;
@@ -310,6 +282,9 @@ void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 {
 	// Clear interrupt flags
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1;
+
+	// Profile cycle count
+	ITM_Port32(2)	= DWT->CYCCNT;
 
 	// Disable slave mode, can't stop the timer unless we do this first
 	TIM8->SMCR = 0;
