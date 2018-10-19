@@ -46,8 +46,8 @@ typedef struct
 	SPRITEHEADER 	hdr;
 	PFONT 			font;
 	u8				scale;
-	u8				xoffset;
-	u8				yoffset;
+	u8 				unused1;
+	u16				unused2;
 	u8* 			text;
 } LABEL, *PLABEL;
 

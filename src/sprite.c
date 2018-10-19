@@ -222,8 +222,6 @@ PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, CO
 	PLABEL ps 				= (PLABEL)initSpriteHeader(spriteAlloc(sizeof(LABEL)), left, top, width, height, foreground, background, SF_VISIBLE);
 	ps->hdr.renderProc		= renderLabel;
 	ps->scale				= scale;
-	ps->xoffset				= 0;
-	ps->yoffset				= 0;
 	ps->text				= text;
 	ps->font				= font;
 

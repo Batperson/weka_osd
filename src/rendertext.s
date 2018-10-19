@@ -8,66 +8,151 @@
 
 .section .text
 .global rendertext
-.type  rendertext, %function	// r0: pointer to render parameters (colour, clip rect, flags)
-								// r1: pointer to font
-								// r2: pointer to chars to render, length-prefixed
-								// r3:
+.type  rendertext, %function	// r0: pointer to LABEL structure
 								// renderBuf and currentRenderScanLine are externals
 
-ppm		.req r0					// ppm (pointer to render params) is r0
-pfnt	.req r1					// pfnt (pointer to font) is r1
-pstr 	.req r2					// pstr (pointer to string, length-prefixed) is r2
-strlen	.req r4					// strlen is r4
-scale	.req r5					// scale is r5
-colour	.req r6
-soffsx	.req r7					// source offset x
-soffsy	.req r8					// source offset y
-chrh	.req r9					// char height
+pl		.req r0					// ppm (pointer to label)
+pdst	.req r1					// pdst (pointer to dest)
+psrc 	.req r2					// psrc (pointer to source bitmap)
+fntdt	.req r3					// font details (width in bits [0-4], bytes per char line [5-6], scale [7-8], height in bits [9-13], current line [14-18], colour [24-31])
+src		.req r4					// src (current font bitmap byte)
 
-pbuf	.req r10				// pbuf (pointer to current position in output buffer) is r10
-pclprt	.req lr					// pclprt (pointer to buffer position of right of clip window) is lr
+width   .req r5
+srcbit	.req r6					// counters
+dstbyte .req r7
+sclcnt	.req r8
 
-  // Test code & initialization
-  mov scale, #2					// test code, set scale = 2.
-  mov colour, #111				// test code
-  mov soffsx, #0
-  mov soffsy, #0
-  mov pbuf, #100
-  mov pclprt, #200
-  mov chrh, #9
+psz		.req r9					// pointer to chars to render
+
+mask	.req r10				// mask for blitting
+dest	.req r11				// bits to blit to pdst
+tmp		.req r12				// scratch reg
+tmp2	.req lr					// scratch reg
 
 rendertext:
   stmfd sp!, {r4-r12, lr}		// Stack r4-r12, lr
-  ldr strlen, [pstr], #1		// Load strlen, increment pstr
 
-loop_chars:
-  // Get font data position
-  ldr r12, [pstr], #1			// Get value of current char, increment pstr
-  sub r12, #0x20				// Subtract 32
-  mul r12, r12, chrh			// Multiply by char height to get the index into font data
-  add r12, pfnt, r12			// Add this index to pfnt
-  add r12, soffsy				// Add the current Y offset, r12 now points to the source byte we want in the font bitmap
-  ldrb r11, [r12]				// Read that byte into r11
+initialize:
+  ldr pdst, =renderBuf
+  ldrh tmp, [pl, #2]
+  add pdst, tmp					// pdst = renderBuf + pdst->hdr.rect.left
 
-  // Read the bit at the current font position
-  mov r12, r11
-  lsr r12, soffsx
-  tst r12, #0x01
+  ldr tmp2, =currentRenderScanLine
+  ldrh tmp, [tmp2]				// tmp = *currentRenderScanLine
+  ldrh tmp2, [pl, #4]			// tmp2 = pl->hdr.rect.top
+  sub tmp, tmp2					// tmp -= tmp2
+  ldrb tmp2, [pl, #20]			// tmp2 = pl->scale
+  udiv tmp, tmp, tmp2			// tmp /= tmp2
+  bfi fntdt, tmp, #14, #5		// line, after scaling
 
-  // If bit not set, skip forward [scale] times
-  it ne
-  addne pbuf, scale				// Skip pbuf forward [scale] bytes if the bit is not set
+  ldr psrc, [pl, #16]			// psrc = pdst->font
+  ldr psz, [pl, #24]			// psz = pdst->text
 
-  // If bit is set, loop [scale] times writing [colour] to [renderBuf] at the appropriate offset.
+  ldrb tmp, [psrc, #0]
+  bfi fntdt, tmp, #0, #4		// width (bits per line)
+  ldrb tmp, [psrc, #1]
+  bfi fntdt, tmp, #5, #2		// bytes per line
+  ldrb tmp, [psrc, #2]
+  bfi fntdt, tmp, #9, #5		// height
+  ldrb tmp, [pl, #11]
+  bfi fntdt, tmp, #24, #8		// colour
+  ldrb tmp, [pl, #20]
+  bfi fntdt, tmp, #7, #2		// scale
 
-  // If we advance past the width of the clip rectangle, return immediately
-  cmp pbuf, pclprt
-  bgt return
+  ldrh width, [pl, #6]
+  ubfx sclcnt, fntdt, #7, #2	// sclcnt = pl->scale
+  mov srcbit, #0				// todo: offset if we are right-aligned and clipping
+  ubfx dstbyte, pdst, #0, #2	// dstbyte = 2 lsb of pdst
+  and pdst, #0xfffffffc			// pdst now word-aligned
 
-  // If we advance past the width of the current char, set soffsx to 0 and continue looping
+  ldr psrc, [psrc, #4]			// psrc = psrc->data
 
-  subs strlen, #1				// Decrement strlen
-  bne loop_chars				// If not zero, goto loop_chars
+  // Todo: offset psz, srcbit etc if we are right-aligned and clipping
+
+  // Get first char
+  ldrb tmp, [psz], #1			// tmp = *psz++
+  teq tmp, #0
+  beq return					// if(!tmp) goto return
+
+  sub tmp, #32					// tmp -= 32
+  ubfx tmp2, fntdt, #9, #4		// tmp2 = pl->font->charheight
+  mul tmp, tmp2					// tmp *= tmp2
+  ubfx tmp2, fntdt, #14, #5		// tmp2 = current line
+  add tmp, tmp2					// tmp += tmp2
+  ldrb src, [psrc, tmp]			// src = *(psrc + tmp) !!! This might be unaligned
+
+loop:
+  // Get pixel value
+  mov tmp, #0x80
+  ror tmp, tmp, srcbit			// tmp = 0x80 >> srcbit
+  and tmp, src					// tmp &= src
+  teq tmp, #0x00
+  ite eq						// tmp = (tmp == 0) ? 0 : 0xff
+  moveq tmp, #0x00
+  movne tmp, #0xff
+
+  mov tmp2, #4
+  sub tmp2, dstbyte
+  lsl tmp2, 3					// tmp2 = (4 - dstbyte) * 8
+
+  lsl tmp, tmp2					// tmp <<= tmp2
+  orr mask, tmp					// mask |= tmp
+
+  teq tmp, #0x00				// if (tst == 9)
+  ittt ne						// {
+  ubfxne tmp, fntdt, #24, #8	//    tmp = colour
+  lslne tmp, tmp2				//	  tmp <<= tmp2
+  orrne dest, tmp				//	  dest |= tmp }
+
+  add dstbyte, #1
+  cmp dstbyte, #4
+  bne skip_over_blit
+
+blit:
+  mov dstbyte, #0				// dstbyte = 0
+  cmp mask, #0x00				// if(mask == 0) goto done_blit
+  beq done_blit
+  cmp mask, #0xffffffff			// if(mask != 0xffffffff) goto read_then_modify_blit
+  bne read_then_modify_blit
+
+direct_bit:
+  str dest, [pdst], #4			// *pdst = dest; pdst += 4;
+  b done_blit
+
+read_then_modify_blit:
+  ldr tmp, [pdst], #0			// tmp = *pdst
+  mov tmp2, #0xffffffff
+  bic tmp2, mask				// tmp2 &= ~mask
+  and tmp, tmp2					// tmp &= tmp2
+  orr tmp, dest					// tmp |= dest
+  str tmp, [pdst], #4			// *pdst = tmp; pdst += 4;
+
+done_blit:
+  subs sclcnt, #1				// if(--sclcnt != 0) goto continue_looop
+  bne continue_loop
+
+advance_next_bit:
+  add srcbit, #1				//srcbit++
+  ubfx tmp, fntdt, #0, #4		// tmp = width (todo: will need to increase this because this gives max 15)
+  cmp srcbit, tmp
+  bne continue_looop		// if(srcbit != width) goto continue_looop
+
+get_next_char:
+  mov srcbit, #0
+  ldrb tmp, [psz], #1			// tmp = *psz++
+  teq tmp, #0
+  beq return					// if(!tmp) goto return
+
+  sub tmp, #32					// tmp -= 32
+  ubfx tmp2, fntdt, #9, #4		// tmp2 = pl->font->charheight
+  mul tmp, tmp2					// tmp *= tmp2
+  ubfx tmp2, fntdt, #14, #5		// tmp2 = current line
+  add tmp, tmp2					// tmp += tmp2
+  ldrb src, [psrc, tmp]			// src = *(psrc + tmp) !!! this might be unaligned
+
+continue_loop:
+  subs width, #1				// if(--width > 0) goto loop else return
+  bne loop
 
 return:
   ldmfd sp!, {r4-r12, pc}		// Unstack r4-r12, unstack lr value directly to pc, return

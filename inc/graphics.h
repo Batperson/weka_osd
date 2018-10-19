@@ -54,6 +54,7 @@ typedef struct
 	u8 	charwidth;
 	u8 	charheight;
 	u8 	charbytes;
+	u8  unused;
 	u8* data;
 } FONT, *PFONT;
 
