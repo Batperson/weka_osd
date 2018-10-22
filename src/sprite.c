@@ -15,6 +15,8 @@
 #include "system.h"
 #include "sprite.h"
 
+extern void rendertext(PLABEL ps);
+
 extern volatile PPIXEL renderBuf;
 extern volatile u16 currentRenderScanLine;
 extern FONT systemFont;
@@ -220,7 +222,7 @@ PSPRITE newBitmapBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground
 PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 scale, PFONT font, u8* text)
 {
 	PLABEL ps 				= (PLABEL)initSpriteHeader(spriteAlloc(sizeof(LABEL)), left, top, width, height, foreground, background, SF_VISIBLE);
-	ps->hdr.renderProc		= renderLabel;
+	ps->hdr.renderProc		= rendertext; //renderLabel;
 	ps->scale				= scale;
 	ps->text				= text;
 	ps->font				= font;
@@ -235,16 +237,16 @@ void initSpriteFramework()
 }
 
 // Instance initialization here. In the future this will come from persisted state.
-u8 weka[] = { "WEKA OSD!" };	// System font is incomplete, most lower case is missing
+u8 weka[] = { " " };	// System font is incomplete, most lower case is missing
 void initSprites()
 {
 	memset(sprites, 0, sizeof(sprites));
 
-	sprites[0] 	= newTestpattern(60, 60, 96, 100);
-	sprites[1] 	= newBracket(200, 200, 20, 20, YELLOW, 1, 6);
-	sprites[2] 	= newLabel(180, 120, 120, 50, MAGENTA, TRANSPARENT, 2, &systemFont, weka);
+	//sprites[0] 	= newTestpattern(60, 60, 96, 100);
+	//sprites[1] 	= newBracket(200, 200, 20, 20, YELLOW, 1, 6);
+	sprites[0] 	= newLabel(180, 120, 120, 50, MAGENTA, TRANSPARENT, 2, &systemFont, weka);
 
-	sprites[2]->flags |= SF_BLINKING;
+	//sprites[2]->flags |= SF_BLINKING;
 }
 
 

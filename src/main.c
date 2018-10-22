@@ -17,8 +17,6 @@
 
   PB6-7			I2C SCL and SDA output
 
-  PC6			Pixel clock output for debugging
-
   PF0-7			Pixel bus output
   PF9-10		LEDs, active low
 
@@ -68,7 +66,7 @@ int main(void)
   setFastBlankContrastReductionMode(FBContrastReductionEnabled);
   setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
   setFastBlankEdgeShapeLevel(FBEdgeShapeLevel4);
-  setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold1);
+  setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold3);
 
   initVideo();
 

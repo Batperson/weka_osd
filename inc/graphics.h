@@ -43,6 +43,12 @@ typedef struct
 
 typedef struct
 {
+	POINT p1;
+	POINT p2;
+} LINE, *PLINE;
+
+typedef struct
+{
 	u16 left;
 	u16 top;
 	u16 width;
