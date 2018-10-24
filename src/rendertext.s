@@ -79,8 +79,8 @@ initialize:
   ldrb tmp, [psrc, #FONT_BTSPRLIN]
   bfi fntdt, tmp, #FNTD_BTSPRLIN, #FNTD_BTSPRLIN_W
 
-  //cmp tmp2, tmp												// if(line >= btsPerLine) goto return
-  //bge return
+  cmp tmp2, tmp												// if(line >= btsPerLine) goto return
+  bge return
 
   ldrb tmp, [psrc, #FONT_BTSPRCHAR]
   bfi fntdt, tmp, #FNTD_BTSPRCHAR, #FNTD_BTSPRCHAR_W
@@ -123,9 +123,9 @@ loop:
   moveq tmp, #0x00
   movne tmp, #0xff
 
-  mov tmp2, #4
+  mov tmp2, #3
   sub tmp2, dstbyte
-  lsl tmp2, 3												// tmp2 = (4 - dstbyte) * 8
+  lsl tmp2, 3												// tmp2 = (3 - dstbyte) * 8
 
   lsl tmp, tmp2												// tmp <<= tmp2
   orr mask, tmp												// mask |= tmp
@@ -143,12 +143,6 @@ loop:
 blit:
   mov dstbyte, #0											// dstbyte = 0
   cbz mask, done_blit										// if(mask == 0) goto done_blit
-  cmp mask, #0xffffffff										// if(mask != 0xffffffff) goto read_then_modify_blit
-  bne read_then_modify_blit
-
-direct_bit:
-  str dest, [pdst], #4										// *pdst = dest; pdst += 4;
-  b done_blit
 
 read_then_modify_blit:
   ldr tmp, [pdst], #0										// tmp = *pdst
@@ -156,9 +150,10 @@ read_then_modify_blit:
   bic tmp2, mask											// tmp2 &= ~mask
   and tmp, tmp2												// tmp &= tmp2
   orr tmp, dest												// tmp |= dest
-  str tmp, [pdst], #4										// *pdst = tmp; pdst += 4;
+  str tmp, [pdst]											// *pdst = tmp
 
 done_blit:
+  add pdst, #4												// pdst += 4;
   subs sclcnt, #1											// if(--sclcnt != 0) goto continue_looop
   bne continue_loop
 

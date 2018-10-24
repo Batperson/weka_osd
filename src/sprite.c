@@ -27,11 +27,14 @@ static PIXEL	test1[]		= {
 		RED, RED, RED, RED, RED, RED, RED, RED, RED, RED, RED, RED,
 		ORANGE, ORANGE, ORANGE, ORANGE, ORANGE, ORANGE, ORANGE, ORANGE, ORANGE, ORANGE, ORANGE, ORANGE,
 		YELLOW, YELLOW, YELLOW, YELLOW, YELLOW, YELLOW, YELLOW, YELLOW, YELLOW, YELLOW, YELLOW, YELLOW,
-		MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA,
 		GREEN, GREEN, GREEN, GREEN, GREEN, GREEN, GREEN, GREEN, GREEN, GREEN, GREEN, GREEN,
-		PURPLE, PURPLE, PURPLE, PURPLE, PURPLE, PURPLE, PURPLE, PURPLE, PURPLE, PURPLE, PURPLE, PURPLE,
+		CYAN, CYAN, CYAN, CYAN, CYAN, CYAN, CYAN, CYAN, CYAN, CYAN, CYAN, CYAN,
 		BLUE, BLUE, BLUE, BLUE, BLUE, BLUE, BLUE, BLUE, BLUE, BLUE, BLUE, BLUE,
+		MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA, MAGENTA,
+		VIOLET, VIOLET, VIOLET, VIOLET, VIOLET, VIOLET, VIOLET, VIOLET, VIOLET, VIOLET, VIOLET, VIOLET,
 		WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+		GRAY, GRAY, GRAY, GRAY, GRAY, GRAY, GRAY, GRAY, GRAY, GRAY, GRAY, GRAY,
+		DKGRAY, DKGRAY, DKGRAY, DKGRAY, DKGRAY, DKGRAY, DKGRAY, DKGRAY, DKGRAY, DKGRAY, DKGRAY, DKGRAY
 };
 static PIXEL	test2[] 	= {
 		RED, RED, RED, RED, STRNS, STRNS, STRNS, STRNS, STRNS, STRNS, STRNS, STRNS,
@@ -63,7 +66,7 @@ void initSpriteFrameworkTestpattern()
 
 void renderTestpattern(PSPRITE ps)
 {
-	const u16 bandHeight = 10;
+	const u16 bandHeight = 30;
 
 	void* pdest = renderBuf + ps->rect.left;
 	u16 l = currentRenderScanLine - ps->rect.top;
@@ -237,14 +240,14 @@ void initSpriteFramework()
 }
 
 // Instance initialization here. In the future this will come from persisted state.
-u8 weka[] = { " " };	// System font is incomplete, most lower case is missing
+u8 weka[] = { "W" };	// System font is incomplete, most lower case is missing
 void initSprites()
 {
 	memset(sprites, 0, sizeof(sprites));
 
-	//sprites[0] 	= newTestpattern(60, 60, 96, 100);
-	//sprites[1] 	= newBracket(200, 200, 20, 20, YELLOW, 1, 6);
-	sprites[0] 	= newLabel(180, 120, 120, 50, MAGENTA, TRANSPARENT, 2, &systemFont, weka);
+	sprites[0] 	= newTestpattern(30, 60, 132, 120);
+	sprites[1] 	= newBracket(200, 220, 20, 20, YELLOW, 1, 6);
+	sprites[2] 	= newLabel(180, 190, 32, 20, WHITE, TRANSPARENT, 1, &systemFont, weka);
 
 	//sprites[2]->flags |= SF_BLINKING;
 }

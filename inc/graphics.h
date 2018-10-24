@@ -25,7 +25,9 @@ typedef PIXEL COLOUR;
 #define DKGREEN				RGB(0,1,0)
 #define DKBLUE				RGB(0,0,1)
 
-#define ORANGE				RGB(3,1,0)
+#define ORANGE				RGB(3,2,0)
+#define LTGREEN 			RGB(2,3,0)
+#define AQUAMARINE 			RGB(0,3,2)
 #define PURPLE				RGB(1,0,1)
 #define INDIGO 				RGB(2,0,1)
 #define VIOLET				RGB(2,0,3)
