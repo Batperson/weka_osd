@@ -225,7 +225,7 @@ PSPRITE newBitmapBox(u16 left, u16 top, u16 width, u16 height, COLOUR foreground
 PSPRITE newLabel(u16 left, u16 top, u16 width, u16 height, COLOUR foreground, COLOUR background, u8 scale, PFONT font, u8* text)
 {
 	PLABEL ps 				= (PLABEL)initSpriteHeader(spriteAlloc(sizeof(LABEL)), left, top, width, height, foreground, background, SF_VISIBLE);
-	ps->hdr.renderProc		= rendertext; //renderLabel;
+	ps->hdr.renderProc		= rendertext;
 	ps->scale				= scale;
 	ps->text				= text;
 	ps->font				= font;
@@ -240,16 +240,16 @@ void initSpriteFramework()
 }
 
 // Instance initialization here. In the future this will come from persisted state.
-u8 weka[] = { "W" };	// System font is incomplete, most lower case is missing
+u8 weka[] = { "WEKA OSD! IT'S FULLY FUNCTIONAL!!! #@%^$" };	// System font is incomplete, most lower case is missing
 void initSprites()
 {
 	memset(sprites, 0, sizeof(sprites));
 
 	sprites[0] 	= newTestpattern(30, 60, 132, 120);
 	sprites[1] 	= newBracket(200, 220, 20, 20, YELLOW, 1, 6);
-	sprites[2] 	= newLabel(180, 190, 32, 20, WHITE, TRANSPARENT, 1, &systemFont, weka);
+	sprites[2] 	= newLabel(180, 190, 200, 600, RED, TRANSPARENT, 1, &systemFont, weka);
 
-	//sprites[2]->flags |= SF_BLINKING;
+	sprites[2]->flags |= SF_BLINKING;
 }
 
 

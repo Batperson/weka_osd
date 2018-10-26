@@ -75,6 +75,9 @@ initialize:
   ldr psrc, [pl, #LB_FONT]									// psrc = pdst->font
   ldr psz, [pl, #LB_TEXT]									// psz = pdst->text
 
+  mov mask, #0												// mask = 0
+  mov dest, #0												// dest = 0
+
   mov tmp2, tmp
   ldrb tmp, [psrc, #FONT_BTSPRLIN]
   bfi fntdt, tmp, #FNTD_BTSPRLIN, #FNTD_BTSPRLIN_W
@@ -123,8 +126,9 @@ loop:
   moveq tmp, #0x00
   movne tmp, #0xff
 
-  mov tmp2, #3
-  sub tmp2, dstbyte
+  //mov tmp2, #3
+  //sub tmp2, dstbyte
+  mov tmp2, dstbyte
   lsl tmp2, 3												// tmp2 = (3 - dstbyte) * 8
 
   lsl tmp, tmp2												// tmp <<= tmp2
@@ -138,7 +142,7 @@ loop:
 
   add dstbyte, #1
   cmp dstbyte, #4
-  bne done_blit
+  bne advance_scale
 
 blit:
   mov dstbyte, #0											// dstbyte = 0
@@ -153,7 +157,11 @@ read_then_modify_blit:
   str tmp, [pdst]											// *pdst = tmp
 
 done_blit:
+  mov mask, #0												// mask = 0
+  mov dest, #0												// dest = 0
   add pdst, #4												// pdst += 4;
+
+advance_scale:
   subs sclcnt, #1											// if(--sclcnt != 0) goto continue_looop
   bne continue_loop
 
@@ -167,7 +175,7 @@ advance_next_bit:
 get_next_char:
   mov srcbit, #0
   ldrb tmp, [psz], #1										// tmp = *psz++
-  cbz tmp, return											// if(!tmp) goto return
+  cbz tmp, final_blit										// if(!tmp) goto final_blit
 
   sub tmp, #32												// tmp -= 32
   ubfx tmp2, fntdt, #FNTD_BTSPRLIN, #FNTD_BTSPRLIN_W		// tmp2 = pl->font->charheight
@@ -177,8 +185,17 @@ get_next_char:
   ldrb src, [psrc, tmp]										// src = *(psrc + tmp) !!! this might be unaligned
 
 continue_loop:
-  subs width, #1											// if(--width > 0) goto loop else return
+  subs width, #1											// if(--width > 0) goto loop else goto final_blit
   bne loop
+
+final_blit:													// If we exited the loop with some bits still to blit...
+  cbz dstbyte, return										// if(dstbyte == 0) goto return
+  ldr tmp, [pdst], #0										// tmp = *pdst
+  mov tmp2, #0xffffffff
+  bic tmp2, mask											// tmp2 &= ~mask
+  and tmp, tmp2												// tmp &= tmp2
+  orr tmp, dest												// tmp |= dest
+  str tmp, [pdst]											// *pdst = tmp
 
 return:
   ldmfd sp!, {r4-r12, pc}									// Unstack r4-r12, unstack lr value directly to pc, return
