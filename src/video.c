@@ -11,23 +11,21 @@
 #include "control.h"
 #include "video.h"
 #include "graphics.h"
-#include "sprite.h"
 #include "system.h"
 #include "memory.h"
 
-#define LINE_BUFFER_SIZE	384
+#define FRAME_BUF_WIDTH		300
+#define FRAME_BUF_HEIGHT	200
+#define FRAME_BUF_SIZE   	(FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT + ((FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT) % 128))
 
-static volatile PIXEL lineBuf0[LINE_BUFFER_SIZE] ALIGNED(1024);
-static volatile PIXEL lineBuf1[LINE_BUFFER_SIZE] ALIGNED(1024);
-volatile PPIXEL renderBuf;
-volatile u16 currentRenderScanLine;
+static PIXEL frameBuf0[FRAME_BUF_SIZE] ALIGNED(1024);
+static PIXEL frameBuf1[FRAME_BUF_SIZE] ALIGNED(1024);
+static volatile PPIXEL currentRenderBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 static const u16 pixelOutputNanoseconds			= 52000;
 static const u16 pixelsPerLine					= 380;			// PAL = 768*576, NTSC = 640*480
 static const u16 activeVideoLineStart			= 23;			// NTSC starts on line 16?
-
-extern PSPRITE sprites[MAX_SPRITES];
 
 u32 calcNanosecsFromAPB1TimerTicks(u16 ticks)
 {
@@ -216,19 +214,19 @@ void initPixelDma()
 	// Needs to be DMA2 because DMA1 does not have access to the peripherals (http://cliffle.com/article/2015/06/06/pushing-pixels/)
 	DMA_StructInit(&dmai);
 	dmai.DMA_PeripheralBaseAddr 	= (u32)&GPIOF->ODR;
-	dmai.DMA_Memory0BaseAddr 		= (u32)lineBuf0;
+	dmai.DMA_Memory0BaseAddr 		= (u32)frameBuf0;
 	dmai.DMA_DIR 					= DMA_DIR_MemoryToPeripheral;
-	dmai.DMA_BufferSize 			= pixelsPerLine + 4;
+	dmai.DMA_BufferSize 			= FRAME_BUF_WIDTH;
 	dmai.DMA_PeripheralInc 			= DMA_PeripheralInc_Disable;
 	dmai.DMA_MemoryInc 				= DMA_MemoryInc_Enable;
 	dmai.DMA_PeripheralDataSize 	= DMA_PeripheralDataSize_Byte;
-	dmai.DMA_MemoryDataSize 		= DMA_MemoryDataSize_Word;
+	dmai.DMA_MemoryDataSize 		= DMA_MemoryDataSize_Byte; //DMA_MemoryDataSize_Word;
 	dmai.DMA_Mode 					= DMA_Mode_Normal;
 	dmai.DMA_Priority 				= DMA_Priority_VeryHigh;
 	dmai.DMA_Channel 				= DMA_Channel_7;
-	dmai.DMA_FIFOMode 				= DMA_FIFOMode_Enable;
-	dmai.DMA_FIFOThreshold 			= DMA_FIFOThreshold_Full;	// Should this be DMA_FIFOThreshold_1QuarterFull to reduce contention?
-	dmai.DMA_MemoryBurst 			= DMA_MemoryBurst_INC4;
+	dmai.DMA_FIFOMode 				= DMA_FIFOMode_Disable; //DMA_FIFOMode_Enable;
+	dmai.DMA_FIFOThreshold 			= DMA_FIFOThreshold_1QuarterFull; // DMA_FIFOThreshold_Full;	// Should this be DMA_FIFOThreshold_1QuarterFull to reduce contention?
+	dmai.DMA_MemoryBurst 			= DMA_MemoryBurst_Single; //DMA_MemoryBurst_INC4;
 	dmai.DMA_PeripheralBurst 		= DMA_PeripheralBurst_Single;
 	DMA_Init(DMA2_Stream1, &dmai);
 
@@ -243,38 +241,14 @@ void initPixelDma()
 	DMA_Cmd(DMA2_Stream1, ENABLE);
 }
 
-void IN_CCM rasterizeNextScanLine()
-{
-	// Reset the CPU cycle counter
-	DWT->CYCCNT = 0; 
-
-	currentRenderScanLine = currentScanLine() + 1;
-
-	zerobuf(renderBuf, LINE_BUFFER_SIZE);
-
-	PSPRITE ps;
-	for(PSPRITE* pps = sprites; (ps = *pps); pps++)
-	{
-		if(currentRenderScanLine >= ps->rect.top && currentRenderScanLine < (ps->rect.top + ps->rect.height))
-		{
-			if((ps->flags & (SF_VISIBLE | SF_BLINKING)) == SF_VISIBLE || blinkOn())
-			{
-				((void(*)(PSPRITE))ps->renderProc)(ps);
-			}
-		}
-	}
-
-	// Ensure the RGB lines go low at the end of scanline
-	*(renderBuf+pixelsPerLine+1)	= 0;
-
-	// Trace out the number of cycles used to render the current scanline.
-	ITM_Port32(1)	= DWT->CYCCNT;
-}
-
 void INTERRUPT IN_CCM TIM2_IRQHandler()
 {
 	// Clear pending interrupt(s)
 	TIM2->SR = 0;
+
+	// Swap frame buffers
+	currentRenderBuf = (PPIXEL)DMA2_Stream1->M0AR;
+	DMA2_Stream1->M0AR = (u32)((currentRenderBuf == frameBuf0) ? frameBuf1 : frameBuf0);
 
 	toggleLed1();
 }
@@ -285,7 +259,10 @@ void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1;
 
 	// Profile cycle count
-	ITM_Port32(2)	= DWT->CYCCNT;
+	ITM_Port32(1)	= DWT->CYCCNT;
+
+	// Reset the CPU cycle counter
+	DWT->CYCCNT = 0;
 
 	// Disable slave mode, can't stop the timer unless we do this first
 	TIM8->SMCR = 0;
@@ -294,25 +271,34 @@ void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 	TIM8->CR1 = 0;
 	TIM8->EGR = TIM_EventSource_Update;		// Trigger an Update to reset the counter
 
-	// Swap buffers
-	renderBuf = (PPIXEL)DMA2_Stream1->M0AR;
-	DMA2_Stream1->M0AR = (u32)((renderBuf == lineBuf0) ? lineBuf1 : lineBuf0);
-
 	// Re-enable DMA for next scanline. NDTR and M0AR will automatically reload to their original values.
 	DMA2_Stream1->CR |= DMA_SxCR_EN;
+	DMA2_Stream1->M0AR += FRAME_BUF_WIDTH;
 
 	// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
 	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
+}
 
-	// For now, simply call this function from the interrupt. Later, will want to
-	// do a context switch to it.
-	rasterizeNextScanLine();
+void initTestPattern(PPIXEL buf)
+{
+	buf += FRAME_BUF_WIDTH * 30;
+
+	for(int i=0; i<10; i++)
+	{
+		memset((void*)buf+60, RED, 20);
+
+		buf += FRAME_BUF_WIDTH;
+	}
 }
 
 void initVideo()
 {
-	initSpriteFramework();
-	initSprites();
+	// We start outputting buf0, so render to 1
+	currentRenderBuf = frameBuf1;
+
+	initTestPattern(frameBuf0);
+	initTestPattern(frameBuf1);
+
 	initRCC();
 	initSyncPort();
 	initPixelPort();
