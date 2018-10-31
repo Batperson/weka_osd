@@ -259,12 +259,13 @@ void IN_CCM rasterizeNextScanLine()
 		{
 			if((ps->flags & (SF_VISIBLE | SF_BLINKING)) == SF_VISIBLE || blinkOn())
 			{
-				void(*render)(PSPRITE) = ps->renderProc;
-
-				render(ps);
+				((void(*)(PSPRITE))ps->renderProc)(ps);
 			}
 		}
 	}
+
+	// Ensure the RGB lines go low at the end of scanline
+	*(renderBuf+pixelsPerLine+1)	= 0;
 
 	// Trace out the number of cycles used to render the current scanline.
 	ITM_Port32(1)	= DWT->CYCCNT;

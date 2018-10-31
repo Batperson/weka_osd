@@ -126,11 +126,7 @@ loop:
   moveq tmp, #0x00
   movne tmp, #0xff
 
-  //mov tmp2, #3
-  //sub tmp2, dstbyte
-  mov tmp2, dstbyte
-  lsl tmp2, 3												// tmp2 = (3 - dstbyte) * 8
-
+  mov tmp2, dstbyte, lsl #3									// tmp2 = (3 - dstbyte) * 8
   lsl tmp, tmp2												// tmp <<= tmp2
   orr mask, tmp												// mask |= tmp
 
