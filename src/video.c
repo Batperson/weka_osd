@@ -24,8 +24,9 @@ static volatile PPIXEL currentRenderBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 static const u16 pixelOutputNanoseconds			= 52000;
-static const u16 pixelsPerLine					= 380;			// PAL = 768*576, NTSC = 640*480
+static const u16 pixelsPerLine					= 300;			// PAL = 768*576, NTSC = 640*480
 static const u16 activeVideoLineStart			= 23;			// NTSC starts on line 16?
+static const u16 activeVideoLineEnd				= 223;
 
 u32 calcNanosecsFromAPB1TimerTicks(u16 ticks)
 {
@@ -246,17 +247,30 @@ void INTERRUPT IN_CCM TIM2_IRQHandler()
 	// Clear pending interrupt(s)
 	TIM2->SR = 0;
 
-	// Swap frame buffers
-	currentRenderBuf = (PPIXEL)DMA2_Stream1->M0AR;
+	// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
+	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
+
+	// Swap frame buffers and start drawing if we have rendered an entire frame
+	if(currentField() != 0)
+	{
+		currentRenderBuf = (PPIXEL)DMA2_Stream1->M0AR;
+
+		// TODO: trigger draw of next frame
+	}
+
+	// Begin scanout from the start of the frame buffer
 	DMA2_Stream1->M0AR = (u32)((currentRenderBuf == frameBuf0) ? frameBuf1 : frameBuf0);
+
+	// Re-enable DMA stream
+	DMA2_Stream1->CR |= DMA_SxCR_EN;
 
 	toggleLed1();
 }
 
 void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 {
-	// Clear interrupt flags
-	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1;
+	// Clear all interrupt flags
+	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1 | DMA_LIFCR_CDMEIF1 | DMA_LIFCR_CFEIF1;
 
 	// Profile cycle count
 	ITM_Port32(1)	= DWT->CYCCNT;
@@ -271,12 +285,17 @@ void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 	TIM8->CR1 = 0;
 	TIM8->EGR = TIM_EventSource_Update;		// Trigger an Update to reset the counter
 
-	// Re-enable DMA for next scanline. NDTR and M0AR will automatically reload to their original values.
-	DMA2_Stream1->CR |= DMA_SxCR_EN;
-	DMA2_Stream1->M0AR += FRAME_BUF_WIDTH;
+	if(currentVideoLine() < activeVideoLineEnd)
+	{
+		// Move DMA source to start of next scanline
+		DMA2_Stream1->M0AR += FRAME_BUF_WIDTH;
 
-	// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
-	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
+		// Re-enable DMA for next scanline.
+		DMA2_Stream1->CR |= DMA_SxCR_EN;
+
+		// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
+		TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
+	}
 }
 
 void initTestPattern(PPIXEL buf)
