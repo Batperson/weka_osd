@@ -9,24 +9,24 @@
 #include "string.h"
 #include "bitband.h"
 #include "control.h"
-#include "video.h"
 #include "graphics.h"
+#include "video.h"
 #include "system.h"
 #include "memory.h"
 
-#define FRAME_BUF_WIDTH		300
-#define FRAME_BUF_HEIGHT	200
-#define FRAME_BUF_SIZE   	(FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT + ((FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT) % 128))
+#define FRAME_BUF_SIZE   	(FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT + ((128+((FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT) % 128)) % 128))
 
 static PIXEL frameBuf0[FRAME_BUF_SIZE] ALIGNED(1024);
 static PIXEL frameBuf1[FRAME_BUF_SIZE] ALIGNED(1024);
-static volatile PPIXEL currentRenderBuf;
+volatile PPIXEL currentRenderBuf;
+static volatile PPIXEL currentOutputBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 static const u16 pixelOutputNanoseconds			= 52000;
-static const u16 pixelsPerLine					= 300;			// PAL = 768*576, NTSC = 640*480
-static const u16 activeVideoLineStart			= 23;			// NTSC starts on line 16?
-static const u16 activeVideoLineEnd				= 223;
+static const u16 pixelsPerLine					= FRAME_BUF_WIDTH;	// PAL = 768*576, NTSC = 640*480
+static const u16 pixelClockCycles				= 20; 				// 28 // calcAPB2TimerPeriod(pixelOutputNanoseconds / pixelsPerLine);
+static const u16 activeVideoLineStart			= 50;				// PAL starts on line 23, NTSC starts on line 16?
+static const u16 activeVideoLineEnd				= 50 + FRAME_BUF_HEIGHT;
 
 u32 calcNanosecsFromAPB1TimerTicks(u16 ticks)
 {
@@ -129,7 +129,7 @@ void initPixelClock()
 
 	timb.TIM_Prescaler 			= 0;
 	timb.TIM_CounterMode 		= TIM_CounterMode_Up;
-	timb.TIM_Period 			= calcAPB2TimerPeriod(pixelOutputNanoseconds / pixelsPerLine);
+	timb.TIM_Period 			= pixelClockCycles;
 	timb.TIM_ClockDivision 		= TIM_CKD_DIV1;
 	timb.TIM_RepetitionCounter 	= 0;
 	TIM_TimeBaseInit(TIM8, &timb);
@@ -198,7 +198,7 @@ void initLineCount()
 
 	NVIC_Init(&nvic);
 
-	TIM_ITConfig(TIM2, TIM_IT_CC3, ENABLE);
+	TIM_ITConfig(TIM2, TIM_IT_CC1, ENABLE);
 
 	TIM_Cmd(TIM2, ENABLE);
 }
@@ -215,7 +215,7 @@ void initPixelDma()
 	// Needs to be DMA2 because DMA1 does not have access to the peripherals (http://cliffle.com/article/2015/06/06/pushing-pixels/)
 	DMA_StructInit(&dmai);
 	dmai.DMA_PeripheralBaseAddr 	= (u32)&GPIOF->ODR;
-	dmai.DMA_Memory0BaseAddr 		= (u32)frameBuf0;
+	dmai.DMA_Memory0BaseAddr 		= (u32)currentOutputBuf;
 	dmai.DMA_DIR 					= DMA_DIR_MemoryToPeripheral;
 	dmai.DMA_BufferSize 			= FRAME_BUF_WIDTH;
 	dmai.DMA_PeripheralInc 			= DMA_PeripheralInc_Disable;
@@ -242,27 +242,44 @@ void initPixelDma()
 	DMA_Cmd(DMA2_Stream1, ENABLE);
 }
 
+void initPendSV()
+{
+	// We need to use this function for IRQs with negative values such as PendSV, SVC etc
+	// We want PendSV to have the lowest possible priority so it doesn't pre-empt any time-critical interrupts, especially sync
+	NVIC_SetPriority(PendSV_IRQn, 255);
+}
+
 void INTERRUPT IN_CCM TIM2_IRQHandler()
 {
 	// Clear pending interrupt(s)
 	TIM2->SR = 0;
 
-	// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
-	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
-
 	// Swap frame buffers and start drawing if we have rendered an entire frame
 	if(currentField() != 0)
 	{
-		currentRenderBuf = (PPIXEL)DMA2_Stream1->M0AR;
+		if(currentRenderBuf == frameBuf0)
+		{
+			currentRenderBuf = frameBuf1;
+			currentOutputBuf = frameBuf0;
+		}
+		else
+		{
+			currentRenderBuf = frameBuf0;
+			currentOutputBuf = frameBuf1;
+		}
 
-		// TODO: trigger draw of next frame
+		// Trigger PendSV interrupt to schedule the render of next frame
+		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 	}
 
 	// Begin scanout from the start of the frame buffer
-	DMA2_Stream1->M0AR = (u32)((currentRenderBuf == frameBuf0) ? frameBuf1 : frameBuf0);
+	DMA2_Stream1->M0AR = (u32)currentOutputBuf;
 
 	// Re-enable DMA stream
 	DMA2_Stream1->CR |= DMA_SxCR_EN;
+
+	// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
+	TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
 
 	toggleLed1();
 }
@@ -272,12 +289,6 @@ void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 	// Clear all interrupt flags
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1 | DMA_LIFCR_CDMEIF1 | DMA_LIFCR_CFEIF1;
 
-	// Profile cycle count
-	ITM_Port32(1)	= DWT->CYCCNT;
-
-	// Reset the CPU cycle counter
-	DWT->CYCCNT = 0;
-
 	// Disable slave mode, can't stop the timer unless we do this first
 	TIM8->SMCR = 0;
 
@@ -285,7 +296,7 @@ void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 	TIM8->CR1 = 0;
 	TIM8->EGR = TIM_EventSource_Update;		// Trigger an Update to reset the counter
 
-	if(currentVideoLine() < activeVideoLineEnd)
+	if(currentScanLine() < activeVideoLineEnd)
 	{
 		// Move DMA source to start of next scanline
 		DMA2_Stream1->M0AR += FRAME_BUF_WIDTH;
@@ -298,25 +309,33 @@ void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 	}
 }
 
-void initTestPattern(PPIXEL buf)
+void INTERRUPT IN_CCM PendSV_Handler()
 {
-	buf += FRAME_BUF_WIDTH * 30;
+	// Reset cycle counter
+	DWT->CYCCNT = 0;
 
-	for(int i=0; i<10; i++)
-	{
-		memset((void*)buf+60, RED, 20);
+	//zerobuf(currentRenderBuf, FRAME_BUF_SIZE);
+	memset(currentRenderBuf, 0, FRAME_BUF_SIZE);
 
-		buf += FRAME_BUF_WIDTH;
-	}
+	RECT rc = { 1, 10, 298, 100 };
+	drawRect(&rc, RED, GRAY);
+
+	RECT rc2 = { 60, 120, 120, 20 };
+	drawTestPattern(&rc2);
+
+	// Output cycle count for profiling
+	ITM_Port32(1)	= DWT->CYCCNT;
 }
 
 void initVideo()
 {
-	// We start outputting buf0, so render to 1
-	currentRenderBuf = frameBuf1;
+	// Clear the buffers
+	zerobuf(frameBuf0, FRAME_BUF_SIZE);
+	zerobuf(frameBuf1, FRAME_BUF_SIZE);
 
-	initTestPattern(frameBuf0);
-	initTestPattern(frameBuf1);
+	// We start outputting buf0, so render to 1
+	currentOutputBuf = frameBuf0;
+	currentRenderBuf = frameBuf1;
 
 	initRCC();
 	initSyncPort();
@@ -324,6 +343,7 @@ void initVideo()
 	initLineCount();
 	initPixelClock();
 	initPixelDma();
+	initPendSV();
 
 	printf("Video configured\r\n");
 }

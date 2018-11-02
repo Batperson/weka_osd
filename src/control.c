@@ -53,7 +53,6 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x79, 0x02);	// Manual Offsets A to 64d & B,C to 512, undocumented setting
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x7A, 0x00);	// Manual Offsets A to 64d & B,C to 512, undocumented setting
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0xC5, 0x00);	// Clamp Mode 0 for FB hc based, undocumented setting
-	//
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF3, 0x0F);	// Enable Anti Alias Filter on ADC0-3
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF9, 0x03);	// Set max v lock range
@@ -96,6 +95,12 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x36, 0x50);	// HS Control
 
 	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x88, 0x00);	// 8-bit input
+
+	setFastBlankMode(FBModeDynamicEdgeEnhanced);
+	setFastBlankContrastReductionMode(FBContrastReductionEnabled);
+	setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
+	setFastBlankEdgeShapeLevel(FBEdgeShapeLevel4);
+	setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold3);
 }
 
 void showTestPattern()

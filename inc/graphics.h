@@ -83,4 +83,9 @@ typedef struct
 	u8* data;
 } BITMAP, *PBITMAP;
 
+void drawTestPattern(PRECT rect);
+void drawRect(PRECT rect, COLOUR foreground, COLOUR background);
+void drawText(PRECT rect, char* psz, COLOUR foreground, COLOUR background);
+void drawLine(PLINE line, COLOUR foreground, PRECT clip);
+
 #endif /* GRAPHICS_H_ */

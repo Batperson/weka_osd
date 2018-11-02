@@ -5,6 +5,7 @@
 #include "i2c.h"
 #include "control.h"
 #include "system.h"
+#include "graphics.h"
 #include "video.h"
 
 /*
@@ -51,23 +52,15 @@ int main(void)
   SystemCoreClockUpdate();
   initDebug();
 
-  /* TODO - Add your application code here */
   printf("Initializing hardware...\r\n");
 
   /* Give the chips a chance to fully power up */
-  sleep(1000);
+  sleep(400);
 
   initLeds();
   initI2C1();
   initVideoChips();
   initSystem();
-
-  setFastBlankMode(FBModeDynamicEdgeEnhanced);
-  setFastBlankContrastReductionMode(FBContrastReductionEnabled);
-  setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
-  setFastBlankEdgeShapeLevel(FBEdgeShapeLevel4);
-  setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold3);
-
   initVideo();
 
   while (1)
