@@ -8,6 +8,7 @@
 
 #define FRAME_BUF_WIDTH		300
 #define FRAME_BUF_HEIGHT	200
+#define FRAME_BUF_SIZE   	(FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT + ((128+((FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT) % 128)) % 128))
 
 void initVideo();
 

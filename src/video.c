@@ -14,8 +14,6 @@
 #include "system.h"
 #include "memory.h"
 
-#define FRAME_BUF_SIZE   	(FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT + ((128+((FRAME_BUF_WIDTH * FRAME_BUF_HEIGHT) % 128)) % 128))
-
 static PIXEL frameBuf0[FRAME_BUF_SIZE] ALIGNED(1024);
 static PIXEL frameBuf1[FRAME_BUF_SIZE] ALIGNED(1024);
 volatile PPIXEL currentRenderBuf;
@@ -307,24 +305,6 @@ void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
 		// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
 		TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
 	}
-}
-
-void INTERRUPT IN_CCM PendSV_Handler()
-{
-	// Reset cycle counter
-	DWT->CYCCNT = 0;
-
-	//zerobuf(currentRenderBuf, FRAME_BUF_SIZE);
-	memset(currentRenderBuf, 0, FRAME_BUF_SIZE);
-
-	RECT rc = { 1, 10, 298, 100 };
-	drawRect(&rc, RED, GRAY);
-
-	RECT rc2 = { 60, 120, 120, 20 };
-	drawTestPattern(&rc2);
-
-	// Output cycle count for profiling
-	ITM_Port32(1)	= DWT->CYCCNT;
 }
 
 void initVideo()

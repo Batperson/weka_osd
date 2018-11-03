@@ -4,6 +4,7 @@
  */
 
 #include "stm32f4xx.h"
+#include "math.h"
 #include "string.h"
 #include "stdio.h"
 #include "graphics.h"
@@ -12,11 +13,44 @@
 
 extern volatile PPIXEL currentRenderBuf;
 
-ALWAYS_INLINE PPIXEL ptToOffset(dimpos_t x, dimpos_t y) { return currentRenderBuf + (y * FRAME_BUF_WIDTH) + x; }
-ALWAYS_INLINE void setPixel(dimpos_t x, dimpos_t y, COLOUR colour) { *ptToOffset(x,y) = colour; }
+ALWAYS_INLINE PPIXEL ptToOffset(du x, du y) { return currentRenderBuf + (y * FRAME_BUF_WIDTH) + x; }
+ALWAYS_INLINE void setPixel(du x, du y, COLOUR colour) { *ptToOffset(x,y) = colour; }
 
 static COLOUR testPattern[]= { RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, MAGENTA, VIOLET, WHITE, GRAY, DKGRAY };
 static RECT rcBuf = { 0, 0, FRAME_BUF_WIDTH, FRAME_BUF_HEIGHT };
+
+void clearRenderBuf()
+{
+	//zerobuf(currentRenderBuf, FRAME_BUF_SIZE);
+	memset(currentRenderBuf, 0, FRAME_BUF_SIZE);
+}
+
+void offsetPts(PPOINT ppt, u16 cnt, du dx, du dy)
+{
+	while(cnt--)
+	{
+		PPOINT pt = ppt+cnt;
+
+		pt->x += dx;
+		pt->y += dy;
+	}
+}
+
+void rotatePts(PPOINT ppt, u16 cnt, PPOINT ctr, float angle)
+{
+	while(cnt--)
+	{
+		PPOINT pt = ppt+cnt;
+		float x = pt->x - ctr->x;
+		float y = pt->y - ctr->y;
+
+		float sin = sinf(angle);
+		float cos = cosf(angle);
+
+		pt->x		= nearbyintf((float)((x * cos) - (y * sin))) + ctr->x;
+		pt->y		= nearbyintf((float)((y * cos) + (x * sin))) + ctr->y;
+	}
+}
 
 void drawTestPattern(PRECT rect)
 {
@@ -48,9 +82,9 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 {
 	if(clip == NULL) clip = &rcBuf;
 
-	dimpos_t dx, dy, e;
-	dimpos_t incx, incy, inc1, inc2;
-	dimpos_t x, y;
+	du dx, dy, e;
+	du incx, incy, inc1, inc2;
+	du x, y;
 
 	dx = line->p2.x - line->p1.x;
 	dy = line->p2.y - line->p1.y;
@@ -86,7 +120,7 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 			if(y < clip->top) y = clip->top;
 			if(y + dy > clip->top + clip->height) dx -= ((x + dx) - (clip->top + clip->height));
 
-			for (dimpos_t i = y; i < dy; i++)
+			for (du i = y; i < dy; i++)
 				setPixel(x, i, foreground);
 		}
 	}
@@ -99,7 +133,7 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 		inc1 = 2 * ( dy -dx);
 		inc2 = 2 * dy;
 
-		for (dimpos_t i = 0; i < dx; i++)
+		for (du i = 0; i < dx; i++)
 		{
 			if (e >= 0)
 			{
@@ -126,7 +160,7 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 		inc1 = 2 * (dx - dy);
 		inc2 = 2 * dx;
 
-		for(dimpos_t i = 0; i < dy; i++)
+		for(du i = 0; i < dy; i++)
 		{
 			if (e >= 0)
 			{
