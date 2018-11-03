@@ -117,6 +117,7 @@ void setFastBlankContrastReductionMode(FBContrastReductionModeType fbcm);
 void setFastBlankContrastReductionLevel(FBContrastReductionLevelType fbcl);
 void setFastBlankEdgeShapeLevel(FBEdgeShapeLevelType fbesl);
 void setFastBlankThresholds(FBLevelThresholdType fbl, FBContrastThresholdType fbc);
+void setHSyncTiming(u16 hsyncStart, u16 hsyncEnd);
 
 // The LEDs are effectively active-low because they are connected to VCC and the GPIO is GND. Set to 0 to turn the LEDs on.
 typedef enum {

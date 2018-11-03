@@ -236,3 +236,14 @@ void setFastBlankThresholds(FBLevelThresholdType fbl, FBContrastThresholdType fb
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL5, v);
 }
+
+void setHSyncTiming(u16 hsyncStart, u16 hsyncEnd)
+{
+	u8 vals[3];
+	vals[0]  = (hsyncEnd   & 0x700) >> 8;
+	vals[0] |= (hsyncStart & 0x700) >> 4;
+	vals[1]  = (hsyncStart & 0xFF);
+	vals[2]  = (hsyncEnd   & 0xFF);
+
+	I2C_BufferWrite(I2C1, ADDR_DECODER, REG_DEC_HSE, vals, 3);
+}

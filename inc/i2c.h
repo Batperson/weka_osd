@@ -73,6 +73,9 @@
 #define DEC_AD_SECAM_EN					0x40
 #define DEC_AD_SEC525_EN				0x80
 
+#define REG_DEC_HSE						0x34
+#define REG_DEC_PIN_POLARITY			0x37
+
 // Encoder defines
 #define ADDR_ENCODER					0x56
 
