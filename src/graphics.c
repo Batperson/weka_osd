@@ -38,6 +38,8 @@ void offsetPts(PPOINT ppt, u16 cnt, du dx, du dy)
 
 void rotatePts(PPOINT ppt, u16 cnt, PPOINT ctr, float angle)
 {
+	angle *= (M_PI / 180);
+
 	while(cnt--)
 	{
 		PPOINT pt = ppt+cnt;
@@ -47,8 +49,8 @@ void rotatePts(PPOINT ppt, u16 cnt, PPOINT ctr, float angle)
 		float sin = sinf(angle);
 		float cos = cosf(angle);
 
-		pt->x		= nearbyintf((float)((x * cos) - (y * sin))) + ctr->x;
-		pt->y		= nearbyintf((float)((y * cos) + (x * sin))) + ctr->y;
+		pt->x		= nearbyintf((x * cos) - (y * sin)) + ctr->x;
+		pt->y		= nearbyintf((y * cos) + (x * sin)) + ctr->y;
 	}
 }
 
@@ -119,6 +121,8 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 			if(y > line->p2.y) y = line->p2.y;
 			if(y < clip->top) y = clip->top;
 			if(y + dy > clip->top + clip->height) dx -= ((x + dx) - (clip->top + clip->height));
+
+			dy += y;
 
 			for (du i = y; i < dy; i++)
 				setPixel(x, i, foreground);
