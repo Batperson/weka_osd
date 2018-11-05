@@ -11,7 +11,7 @@
 #include "graphics.h"
 #include "system.h"
 #include "memory.h"
-
+#include "model.h"
 
 void INTERRUPT IN_CCM PendSV_Handler()
 {
@@ -48,7 +48,7 @@ void INTERRUPT IN_CCM PendSV_Handler()
 
 	int rays = (sizeof(pts) / sizeof(POINT)) / 2;
 	float angle = 360.0 / (float)rays;
-	float initAngle = (millis() / 10);
+	float initAngle = model.att.roll; //(millis() / 10);
 
 	COLOUR clr = ((millis() / 300) % 0x40) | 0xC0;
 	for(int i=0; i<rays ; i++)
@@ -61,4 +61,7 @@ void INTERRUPT IN_CCM PendSV_Handler()
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;
+
+	// For the time being, update model values from here
+	demoModelUpdate();
 }

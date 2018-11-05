@@ -14,8 +14,8 @@
 #include "system.h"
 #include "memory.h"
 
-static PIXEL frameBuf0[FRAME_BUF_SIZE] ALIGNED(1024);
-static PIXEL frameBuf1[FRAME_BUF_SIZE] ALIGNED(1024);
+static PIXEL frameBuf0[FRAME_BUF_SIZE] ALIGNED(4);
+static PIXEL frameBuf1[FRAME_BUF_SIZE] ALIGNED(4);
 volatile PPIXEL currentRenderBuf;
 static volatile PPIXEL currentOutputBuf;
 

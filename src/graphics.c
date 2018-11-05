@@ -49,8 +49,8 @@ void rotatePts(PPOINT ppt, u16 cnt, PPOINT ctr, float angle)
 		float sin = sinf(angle);
 		float cos = cosf(angle);
 
-		pt->x		= nearbyintf((x * cos) - (y * sin)) + ctr->x;
-		pt->y		= nearbyintf((y * cos) + (x * sin)) + ctr->y;
+		pt->x		= truncf((x * cos) - (y * sin)) + ctr->x;
+		pt->y		= truncf((y * cos) + (x * sin)) + ctr->y;
 	}
 }
 
