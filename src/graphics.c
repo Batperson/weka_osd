@@ -183,3 +183,9 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 		}
 	}
 }
+
+void drawLines(PLINE line, u16 cnt, COLOUR foreground, PRECT clip)
+{
+	while(cnt--)
+		drawLine(line+cnt, foreground, clip);
+}

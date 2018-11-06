@@ -96,7 +96,7 @@ void drawTestPattern(PRECT rect);
 void drawRect(PRECT rect, COLOUR foreground, COLOUR background);
 void drawText(PRECT rect, char* psz, COLOUR foreground, COLOUR background);
 void drawLine(PLINE line, COLOUR foreground, PRECT clip);
-
+void drawLines(PLINE line, u16 cnt, COLOUR foreground, PRECT clip);
 
 
 #endif /* GRAPHICS_H_ */

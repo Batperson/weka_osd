@@ -19,7 +19,7 @@ void demoModelUpdate()
 	float val1 = inc;
 	float val2 = inc / 40;
 
-	model.att.roll 		= sinf(val1) * 60;
-	model.pos.altitude 	= (sinf(val2) * 80) + 20;
-	model.vel.vertical	= (cosf(val2) * 20) - 10;
+	model.att.roll 		= (sinf(val1) * 60);
+	model.pos.altitude 	= (sinf(val2) * 40) + 50;
+	model.vel.vertical	= (cosf(val2) * 10);
 }
