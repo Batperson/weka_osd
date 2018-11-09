@@ -37,12 +37,12 @@ typedef PIXEL COLOUR;
 #define TRANS 				TRANSPARENT
 #define STRNS				SEMITRANSPARENT
 
-typedef s16 du;
+typedef s16 DU;
 
 typedef struct
 {
-	du x;
-	du y;
+	DU x;
+	DU y;
 } POINT, *PPOINT;
 
 typedef struct
@@ -53,10 +53,10 @@ typedef struct
 
 typedef struct
 {
-	du left;
-	du top;
-	du width;
-	du height;
+	DU left;
+	DU top;
+	DU width;
+	DU height;
 } RECT, *PRECT;
 
 typedef struct
@@ -77,6 +77,12 @@ typedef enum
 	BF_BPP_8	= 0x04
 } BitmapFlagsType;
 
+typedef enum
+{
+	AlignLeft	= 0x00,
+	AlignRight	= 0x01
+} AlignmentType;
+
 typedef struct
 {
 	u16	width;
@@ -85,9 +91,9 @@ typedef struct
 	u8* data;
 } BITMAP, *PBITMAP;
 
-ALWAYS_INLINE u8 ptInRect(PRECT rc, du x, du y) { if(x < rc->left) return 0; if(y < rc->top) return 0; if(x >= rc->left + rc->width) return 0; if(y >= rc->top + rc->height) return 0; return 1; }
+ALWAYS_INLINE u8 ptInRect(PRECT rc, DU x, DU y) { if(x < rc->left) return 0; if(y < rc->top) return 0; if(x >= rc->left + rc->width) return 0; if(y >= rc->top + rc->height) return 0; return 1; }
 
-void offsetPts(PPOINT ppt, u16 cnt, du dx, du dy);
+void offsetPts(PPOINT ppt, u16 cnt, DU dx, DU dy);
 void rotatePts(PPOINT ppt, u16 cnt, PPOINT ctr, float angle);
 
 void clearRenderBuf();
@@ -97,6 +103,7 @@ void drawRect(PRECT rect, COLOUR foreground, COLOUR background);
 void drawText(PRECT rect, char* psz, COLOUR foreground, COLOUR background);
 void drawLine(PLINE line, COLOUR foreground, PRECT clip);
 void drawLines(PLINE line, u16 cnt, COLOUR foreground, PRECT clip);
+void drawArrow(PRECT rect, COLOUR foreground, COLOUR background, AlignmentType alignment);
 
 
 #endif /* GRAPHICS_H_ */

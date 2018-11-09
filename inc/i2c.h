@@ -81,6 +81,9 @@
 
 #define REG_ENC_MODE					0x00
 #define REG_ENC_CABLE_DETECT			0x10
+#define REG_ENC_DNR_0					0xA3
+#define REG_ENC_DNR_1					0xA4
+#define REG_ENC_DNR_2					0xA5
 
 void initI2C1();
 u8 I2C_ReadByte(I2C_TypeDef* pI2c, u8 slaveAddr, u8 ReadAddr);

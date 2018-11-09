@@ -7,14 +7,15 @@
 #include "math.h"
 #include "string.h"
 #include "stdio.h"
+#include "stdlib.h"
 #include "graphics.h"
 #include "memory.h"
 #include "video.h"
 
 extern volatile PPIXEL currentRenderBuf;
 
-ALWAYS_INLINE PPIXEL ptToOffset(du x, du y) { return currentRenderBuf + (y * FRAME_BUF_WIDTH) + x; }
-ALWAYS_INLINE void setPixel(du x, du y, COLOUR colour) { *ptToOffset(x,y) = colour; }
+ALWAYS_INLINE PPIXEL ptToOffset(DU x, DU y) { return currentRenderBuf + (y * FRAME_BUF_WIDTH) + x; }
+ALWAYS_INLINE void setPixel(DU x, DU y, COLOUR colour) { *ptToOffset(x,y) = colour; }
 
 static COLOUR testPattern[]= { RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, MAGENTA, VIOLET, WHITE, GRAY, DKGRAY };
 static RECT rcBuf = { 0, 0, FRAME_BUF_WIDTH, FRAME_BUF_HEIGHT };
@@ -25,7 +26,7 @@ void clearRenderBuf()
 	memset(currentRenderBuf, 0, FRAME_BUF_SIZE);
 }
 
-void offsetPts(PPOINT ppt, u16 cnt, du dx, du dy)
+void offsetPts(PPOINT ppt, u16 cnt, DU dx, DU dy)
 {
 	while(cnt--)
 	{
@@ -68,11 +69,12 @@ void drawTestPattern(PRECT rect)
 
 void drawRect(PRECT rect, COLOUR foreground, COLOUR background)
 {
-	u16 bottom = rect->top + rect->height - 1;
+	DU bottom = rect->top + rect->height - 1;
 	mset(ptToOffset(rect->left, rect->top), foreground, rect->width);
 
-	for(int i=rect->top + 1; i<bottom; i++)
+	for(DU i=rect->top + 1; i<bottom; i++)
 	{
+		setPixel(rect->left, i, foreground);
 		mset(ptToOffset(rect->left + 1, i), background, rect->width - 1);
 		setPixel(rect->left + rect->width-1, i, foreground);
 	}
@@ -80,13 +82,36 @@ void drawRect(PRECT rect, COLOUR foreground, COLOUR background)
 	mset(ptToOffset(rect->left, bottom), foreground, rect->width);
 }
 
+void drawArrow(PRECT rect, COLOUR foreground, COLOUR background, AlignmentType alignment)
+{
+	DU bt	= rect->top + rect->height - 1;
+	DU ao	= rect->height >> 1;
+	DU l 	= (alignment == AlignRight) ? rect->left + ao : rect->left;
+	DU w 	= rect->width - ao;
+	DU mp	= rect->top + ao;
+
+	mset(ptToOffset(l, rect->top), foreground, w);
+	mset(ptToOffset(l, bt), foreground, w);
+
+	for(DU i=rect->top + 1; i<bt; i++)
+	{
+		DU z 	= abs(mp - i) + 1;
+		l 		= (alignment == AlignRight) ? rect->left + z : rect->left;
+		w		= rect->width - z;
+
+		setPixel(l, i, foreground);
+		mset(ptToOffset(l+1, i), background, w - 1);
+		setPixel(l+w, i, foreground);
+	}
+}
+
 void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 {
 	if(clip == NULL) clip = &rcBuf;
 
-	du dx, dy, e;
-	du incx, incy, inc1, inc2;
-	du x, y;
+	DU dx, dy, e;
+	DU incx, incy, inc1, inc2;
+	DU x, y;
 
 	dx = line->p2.x - line->p1.x;
 	dy = line->p2.y - line->p1.y;
@@ -124,7 +149,7 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 
 			dy += y;
 
-			for (du i = y; i < dy; i++)
+			for (DU i = y; i < dy; i++)
 				setPixel(x, i, foreground);
 		}
 	}
@@ -137,7 +162,7 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 		inc1 = 2 * ( dy -dx);
 		inc2 = 2 * dy;
 
-		for (du i = 0; i < dx; i++)
+		for (DU i = 0; i < dx; i++)
 		{
 			if (e >= 0)
 			{
@@ -164,7 +189,7 @@ void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 		inc1 = 2 * (dx - dy);
 		inc2 = 2 * dx;
 
-		for(du i = 0; i < dy; i++)
+		for(DU i = 0; i < dy; i++)
 		{
 			if (e >= 0)
 			{

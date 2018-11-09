@@ -101,6 +101,9 @@ void initVideoChips()
 	setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
 	setFastBlankEdgeShapeLevel(FBEdgeShapeLevel4);
 	setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold3);
+
+	//setDnrMode(DNRFilterNone, DNRModeSharpness, 0);
+	//setDnrGain(5, 5);
 }
 
 void showTestPattern()
@@ -247,3 +250,25 @@ void setHSyncTiming(u16 hsyncStart, u16 hsyncEnd)
 
 	I2C_BufferWrite(I2C1, ADDR_DECODER, REG_DEC_HSE, vals, 3);
 }
+
+void setDnrGain(u8 coringGainBorder, u8 coringGainData)
+{
+	u8 v  = (coringGainBorder & 0x0f) | ((coringGainData & 0x0f) << 4);
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_0, v);
+}
+
+void setDnrThreshold(u8 threshold, DNRBorderAreaType borderSize, DNRBlockSizeType blockSize)
+{
+	u8 v  = (threshold & 0x63) | borderSize | blockSize;
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_1, v);
+}
+
+void setDnrMode(DNRFilterType filter, DNRModeType mode, u8 blockOffset)
+{
+	u8 v  = ((blockOffset & 0x0f) << 4) | filter | mode;
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2, v);
+}
+

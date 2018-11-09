@@ -99,6 +99,29 @@ typedef enum {
 	FreeRunForceActive				 	= 0x01
 } FreeRunForceActiveType;
 
+typedef enum {
+	DNRBorderTwoPixels					= 0x00,
+	DNRBorderFourPixels					= 0x40
+} DNRBorderAreaType;
+
+typedef enum {
+	DNRBlockEightPixels					= 0x00,
+	DNRBlockSixteenPixels				= 0x80
+} DNRBlockSizeType;
+
+typedef enum {
+	DNRModeNormal						= 0x00,
+	DNRModeSharpness					= 0x08
+} DNRModeType;
+
+typedef enum {
+	DNRFilterNone						= 0x00,
+	DNRFilterA							= 0x01,
+	DNRFilterB							= 0x02,
+	DNRFilterC							= 0x03,
+	DNRFilterD							= 0x04
+} DNRFilterType;
+
 void initLeds();
 void initVideoChips();
 void showTestPattern();
@@ -118,6 +141,10 @@ void setFastBlankContrastReductionLevel(FBContrastReductionLevelType fbcl);
 void setFastBlankEdgeShapeLevel(FBEdgeShapeLevelType fbesl);
 void setFastBlankThresholds(FBLevelThresholdType fbl, FBContrastThresholdType fbc);
 void setHSyncTiming(u16 hsyncStart, u16 hsyncEnd);
+
+void setDnrGain(u8 coringGainBorder, u8 coringGainData);
+void setDnrThreshold(u8 threshold, DNRBorderAreaType borderSize, DNRBlockSizeType blockSize);
+void setDnrMode(DNRFilterType filter, DNRModeType mode, u8 blockOffset);
 
 // The LEDs are effectively active-low because they are connected to VCC and the GPIO is GND. Set to 0 to turn the LEDs on.
 typedef enum {

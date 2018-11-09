@@ -19,7 +19,7 @@ typedef struct
 	u32 latitude;
 	u32 longitude;
 	float altitude;
-} POSITION;
+} LOCATION;
 
 typedef struct
 {
@@ -37,7 +37,7 @@ typedef struct
 typedef struct
 {
 	ATTITUDE 	att;
-	POSITION 	pos;
+	LOCATION 	loc;
 	VELOCITY 	vel;
 	ELECTRONICS elec;
 } MODEL, *PMODEL;
