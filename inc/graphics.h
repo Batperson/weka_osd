@@ -63,8 +63,8 @@ typedef struct
 {
 	u8 	charwidth;
 	u8 	charheight;
-	u8 	charbytes;
-	u8  unused;
+	u8 	bytesPerChar;
+	u8  asciiOffset;
 	u8* data;
 } FONT, *PFONT;
 
@@ -100,10 +100,10 @@ void clearRenderBuf();
 
 void drawTestPattern(PRECT rect);
 void drawRect(PRECT rect, COLOUR foreground, COLOUR background);
-void drawText(PRECT rect, char* psz, COLOUR foreground, COLOUR background);
 void drawLine(PLINE line, COLOUR foreground, PRECT clip);
 void drawLines(PLINE line, u16 cnt, COLOUR foreground, PRECT clip);
 void drawArrow(PRECT rect, COLOUR foreground, COLOUR background, AlignmentType alignment);
+void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment, char* text);
 
 
 #endif /* GRAPHICS_H_ */

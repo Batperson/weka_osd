@@ -7,6 +7,7 @@
 #include "stm32f4xx.h"
 #include "string.h"
 #include "stdlib.h"
+#include "stdio.h"
 #include "math.h"
 #include "video.h"
 #include "misc.h"
@@ -17,24 +18,27 @@
 #include "render.h"
 
 #define DEGREE_PIXEL_RATIO 4
-#define FBW_H FRAME_BUF_WIDTH / 2
-#define FBH_H FRAME_BUF_HEIGHT / 2
 
-void renderArtificialHorizon()
+extern FONT systemFont;
+
+void renderArtificialHorizon(PRENDERER r)
 {
+	DU hw = r->rect.width / 2;
+	DU hh = r->rect.height / 2;
+
 	LINE lines[] = {
-		{ { FBW_H - 100, FBH_H }, { FBW_H - 20, FBH_H } },
-		{ { FBW_H + 100, FBH_H }, { FBW_H + 20, FBH_H } },
-		{ { FBW_H - 30, FBH_H - (10 * DEGREE_PIXEL_RATIO) },  { FBW_H + 30, FBH_H - (10 * DEGREE_PIXEL_RATIO) } },
-		{ { FBW_H - 30, FBH_H - (20 * DEGREE_PIXEL_RATIO) },  { FBW_H + 30, FBH_H - (20 * DEGREE_PIXEL_RATIO) } },
-		{ { FBW_H - 30, FBH_H + (10 * DEGREE_PIXEL_RATIO) },  { FBW_H + 30, FBH_H + (10 * DEGREE_PIXEL_RATIO) } },
-		{ { FBW_H - 30, FBH_H + (20 * DEGREE_PIXEL_RATIO) },  { FBW_H + 30, FBH_H + (20 * DEGREE_PIXEL_RATIO) } }
+		{ { hw - 100, hh }, { hw - 20, hh } },
+		{ { hw + 100, hh }, { hw + 20, hh } },
+		{ { hw - 30, hh - (10 * DEGREE_PIXEL_RATIO) },  { hw + 30, hh - (10 * DEGREE_PIXEL_RATIO) } },
+		{ { hw - 30, hh - (20 * DEGREE_PIXEL_RATIO) },  { hw + 30, hh - (20 * DEGREE_PIXEL_RATIO) } },
+		{ { hw - 30, hh + (10 * DEGREE_PIXEL_RATIO) },  { hw + 30, hh + (10 * DEGREE_PIXEL_RATIO) } },
+		{ { hw - 30, hh + (20 * DEGREE_PIXEL_RATIO) },  { hw + 30, hh + (20 * DEGREE_PIXEL_RATIO) } }
 	};
 
-	POINT ctr = { FBW_H, FBH_H };
+	POINT ctr = { r->rect.left + hw, r->rect.top + hh };
 	rotatePts((PPOINT)lines, sizeof(lines) / sizeof(POINT), &ctr, model.att.roll);
 	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), 0, model.att.pitch);
-	drawLines(lines, sizeof(lines) / sizeof(LINE), RGB(0,2,0), NULL);
+	drawLines(lines, sizeof(lines) / sizeof(LINE), r->colour, NULL);
 }
 
 #define LINE_RENDER_BATCH 6
@@ -45,6 +49,7 @@ void renderTape(PRENDERER r)
 
 	drawRect(&pt->hdr.rect, SEMITRANSPARENT, SEMITRANSPARENT);
 
+	char sz[6];
 	LINE lines[LINE_RENDER_BATCH];
 
 	float value		= model.loc.altitude;
@@ -90,8 +95,8 @@ void renderTape(PRENDERER r)
 		divs.quot -= lcnt;
 	}
 
-	DU arrowHeight			= 11;
-	DU arrowWidth			= 25;
+	DU arrowHeight			= 13;
+	DU arrowWidth			= 30;
 
 	RECT rc;
 	rc.left					= (pt->hdr.flags & RF_ALIGN_RIGHT) ? pt->hdr.rect.left : (pt->hdr.rect.left + pt->hdr.rect.width) - arrowWidth;
@@ -100,6 +105,21 @@ void renderTape(PRENDERER r)
 	rc.height				= arrowHeight;
 
 	drawArrow(&rc, pt->hdr.colour, SEMITRANSPARENT, (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignRight : AlignLeft);
+
+	rc.top += 2;
+	rc.width -= arrowHeight >> 1;
+
+	sprintf(sz, "%d", (int)truncf(value));
+	if(pt->hdr.flags & RF_ALIGN_RIGHT)
+	{
+		rc.left += (arrowHeight >> 1);
+		drawText(&rc, &systemFont, pt->hdr.colour, AlignLeft, sz);
+	}
+	else
+	{
+		rc.left += 1;
+		drawText(&rc, &systemFont, pt->hdr.colour, AlignRight, sz);
+	}
 }
 
 void INTERRUPT IN_CCM PendSV_Handler()
@@ -112,13 +132,17 @@ void INTERRUPT IN_CCM PendSV_Handler()
 	RECT rc = { 20, 10, 120, 20 };
 	drawTestPattern(&rc);
 
-	RECT rc2 = { 200, 10, 20, 20 };
-	drawRect(&rc2, DKGREEN, TRANSPARENT);
+	if(blinkOn())
+	{
+		RECT rc2 = { 200, 170, 60, 20 };
+		drawText(&rc2, &systemFont, RED, AlignLeft, "ARMED");
+	}
 
 	TAPE tp = { { 0, { 268, 0, 20, 200 }, RGB(0,2,0), NULL }, 1, 20, 5, 8, 4 };
 	renderTape(&tp.hdr);
 
-	renderArtificialHorizon();
+	RENDERER ahi = { 0, { 0, 0, 300, 200 }, RGB(0,2,0), NULL };
+	renderArtificialHorizon(&ahi);
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;

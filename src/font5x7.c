@@ -125,4 +125,4 @@ u8 systemFontData[] IN_RAM =
 	0x00, 0xFC, 0x84, 0x84, 0x84, 0x84, 0xFC, 0x00, 0x00, 		// 0x20 ''
 };
 
-FONT systemFont IN_RAM = { 6, 9, 1, 0, systemFontData };
+FONT systemFont IN_RAM = { 6, 9, 1, 32, systemFontData };

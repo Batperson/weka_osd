@@ -7,8 +7,8 @@
 #ifndef RENDER_H_
 #define RENDER_H_
 
-typedef struct RENDERER* PRENDERER;
-typedef void (*RENDERPROC)(PRENDERER r);
+//typedef struct RENDERER* PRENDERER;
+//typedef void (*RENDERPROC)(PRENDERER r);
 
 typedef enum {
 	RF_NONE								= 0x00,
@@ -22,8 +22,8 @@ typedef struct
 	u16 flags;
 	RECT rect;
 	COLOUR colour;
-	RENDERPROC renderProc;
-} RENDERER;
+	void* /*RENDERPROC*/ renderProc;
+} RENDERER, *PRENDERER;
 
 typedef struct
 {

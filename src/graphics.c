@@ -107,110 +107,211 @@ void drawArrow(PRECT rect, COLOUR foreground, COLOUR background, AlignmentType a
 
 void drawLine(PLINE line, COLOUR foreground, PRECT clip)
 {
-	if(clip == NULL) clip = &rcBuf;
-
-	DU dx, dy, e;
-	DU incx, incy, inc1, inc2;
-	DU x, y;
-
-	dx = line->p2.x - line->p1.x;
-	dy = line->p2.y - line->p1.y;
-
-	if(dx < 0) dx = -dx;
-	if(dy < 0) dy = -dy;
-	incx = 1;
-
-	if(line->p2.x < line->p1.x) incx = -1;
-	incy = 1;
-
-	if(line->p2.y < line->p1.y) incy = -1;
-
-	x=line->p1.x;
-	y=line->p1.y;
-
-	if(dy == 0)
-	{
-		if(line->p1.y >= clip->top && line->p1.y < clip->top + clip->height)
-		{
-			if(x > line->p2.x) x = line->p2.x;
-			if(x < clip->left) x = clip->left;
-			if(x + dx > clip->left + clip->width) dx -= ((x + dx) - (clip->left + clip->width));
-
-			mset(ptToOffset(x, line->p1.y), foreground, dx);
-		}
-	}
-	else if(dx == 0)
-	{
-		if(line->p1.x >= clip->left && line->p1.x < clip->left + clip->width)
-		{
-			if(y > line->p2.y) y = line->p2.y;
-			if(y < clip->top) y = clip->top;
-			if(y + dy > clip->top + clip->height) dx -= ((x + dx) - (clip->top + clip->height));
-
-			dy += y;
-
-			for (DU i = y; i < dy; i++)
-				setPixel(x, i, foreground);
-		}
-	}
-	else if (dx > dy)
-	{
-		if(ptInRect(clip, x, y))
-			setPixel(x, y, foreground);
-
-		e = 2*dy - dx;
-		inc1 = 2 * ( dy -dx);
-		inc2 = 2 * dy;
-
-		for (DU i = 0; i < dx; i++)
-		{
-			if (e >= 0)
-			{
-				y += incy;
-				e += inc1;
-			}
-			else
-			{
-				e += inc2;
-			}
-
-			x += incx;
-
-			if(ptInRect(clip, x, y))
-				setPixel(x, y, foreground);
-		}
-	}
-	else
-	{
-		if(ptInRect(clip, x, y))
-			setPixel(x, y, foreground);
-
-		e = 2 * dx - dy;
-		inc1 = 2 * (dx - dy);
-		inc2 = 2 * dx;
-
-		for(DU i = 0; i < dy; i++)
-		{
-			if (e >= 0)
-			{
-				x += incx;
-				e += inc1;
-			}
-			else
-			{
-				e += inc2;
-			}
-
-			y += incy;
-
-			if(ptInRect(clip, x, y))
-				setPixel(x, y, foreground);
-		}
-	}
+	drawLines(line, 1, foreground, clip);
 }
 
 void drawLines(PLINE line, u16 cnt, COLOUR foreground, PRECT clip)
 {
 	while(cnt--)
-		drawLine(line+cnt, foreground, clip);
+	{
+		if(clip == NULL) clip = &rcBuf;
+
+		DU dx, dy, e;
+		DU incx, incy, inc1, inc2;
+		DU x, y;
+
+		dx = line->p2.x - line->p1.x;
+		dy = line->p2.y - line->p1.y;
+
+		if(dx < 0) dx = -dx;
+		if(dy < 0) dy = -dy;
+		incx = 1;
+
+		if(line->p2.x < line->p1.x) incx = -1;
+		incy = 1;
+
+		if(line->p2.y < line->p1.y) incy = -1;
+
+		x=line->p1.x;
+		y=line->p1.y;
+
+		if(dy == 0)
+		{
+			if(line->p1.y >= clip->top && line->p1.y < clip->top + clip->height)
+			{
+				if(x > line->p2.x) x = line->p2.x;
+				if(x < clip->left) x = clip->left;
+				if(x + dx > clip->left + clip->width) dx -= ((x + dx) - (clip->left + clip->width));
+
+				mset(ptToOffset(x, line->p1.y), foreground, dx);
+			}
+		}
+		else if(dx == 0)
+		{
+			if(line->p1.x >= clip->left && line->p1.x < clip->left + clip->width)
+			{
+				if(y > line->p2.y) y = line->p2.y;
+				if(y < clip->top) y = clip->top;
+				if(y + dy > clip->top + clip->height) dx -= ((x + dx) - (clip->top + clip->height));
+
+				dy += y;
+
+				for (DU i = y; i < dy; i++)
+					setPixel(x, i, foreground);
+			}
+		}
+		else if (dx > dy)
+		{
+			if(ptInRect(clip, x, y))
+				setPixel(x, y, foreground);
+
+			e = 2*dy - dx;
+			inc1 = 2 * ( dy -dx);
+			inc2 = 2 * dy;
+
+			for (DU i = 0; i < dx; i++)
+			{
+				if (e >= 0)
+				{
+					y += incy;
+					e += inc1;
+				}
+				else
+				{
+					e += inc2;
+				}
+
+				x += incx;
+
+				if(ptInRect(clip, x, y))
+					setPixel(x, y, foreground);
+			}
+		}
+		else
+		{
+			if(ptInRect(clip, x, y))
+				setPixel(x, y, foreground);
+
+			e = 2 * dx - dy;
+			inc1 = 2 * (dx - dy);
+			inc2 = 2 * dx;
+
+			for(DU i = 0; i < dy; i++)
+			{
+				if (e >= 0)
+				{
+					x += incx;
+					e += inc1;
+				}
+				else
+				{
+					e += inc2;
+				}
+
+				y += incy;
+
+				if(ptInRect(clip, x, y))
+					setPixel(x, y, foreground);
+			}
+		}
+
+		line++;
+	}
 }
+
+void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment, char* text)
+{
+	DU x, y;
+	char* sz;
+	int s;
+
+	if(alignment == AlignRight)
+	{
+		int l = strlen(text);
+		DU w  = l * font->charwidth;
+
+		x = (rect->left + rect->width) - w;
+		y = rect->top;
+
+		if(x < rect->left)
+		{
+			sz = text + (w / font->charwidth);
+			s = (w % font->charwidth);
+		}
+		else
+		{
+			sz = text;
+			s = 0;
+		}
+	}
+	else
+	{
+		s = 0;
+		sz = text;
+		x = rect->left;
+		y = rect->top;
+	}
+
+	register u32 brush = foreground | (foreground << 8) | (foreground << 16) | (foreground << 24);
+
+	while(*sz)
+	{
+		for(int i=0; i<font->charheight; i++)
+		{
+			PPIXEL dest = ptToOffset(x, y + i);
+
+			register u32 mask	= 0x00;
+			register u8* src	= font->data + ((*sz-font->asciiOffset) * font->charheight) + (i * font->bytesPerChar);
+			register u32* dw	= (u32*)((u32)dest & ~0x3);
+			register u8 dwp		= ((u32)dest & 0x3);
+			register u8 sbp		= 0;
+
+			for(int j=s; j<font->charwidth; j++)
+			{
+				if((x + j) >= (rect->left + rect->width))
+					break;
+
+				// Must take account of little-endian word arrangement, i.e. left-most pixel goes at right-most byte
+				int v = (*src >> (7 - sbp)) & 0x01;
+				if(v == 1)
+					mask |= (0xff << (dwp * 8));
+
+				if(++dwp >= 4)
+				{
+					if(mask == 0xffffffff)
+						*dw = brush;
+					else if(mask > 0)
+						*dw = ((*dw & ~mask) | (brush & mask));
+
+					dwp = 0;
+					mask = 0;
+					dw++;
+				}
+
+				if(++sbp >= 8)
+				{
+					sbp = 0;
+					src++;
+				}
+			}
+
+			if(dwp > 0)
+			{
+				if(mask == 0xffffffff)
+					*dw = brush;
+				else if(mask > 0)
+					*dw = ((*dw & ~mask) | (brush & mask));
+			}
+
+			if((y + i) >= (rect->top + rect->height))
+				break;
+		}
+
+		s = 0;
+		sz++;
+
+		if((x += font->charwidth) >= rect->left + rect->width)
+			break;
+	}
+}
+
