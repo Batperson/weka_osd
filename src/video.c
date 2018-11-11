@@ -23,8 +23,8 @@ static volatile PPIXEL currentOutputBuf;
 static const u16 pixelOutputNanoseconds			= 52000;
 static const u16 pixelsPerLine					= FRAME_BUF_WIDTH;	// PAL = 768*576, NTSC = 640*480
 static const u16 pixelClockCycles				= 20; 				// 28 // calcAPB2TimerPeriod(pixelOutputNanoseconds / pixelsPerLine);
-static const u16 activeVideoLineStart			= 50;				// PAL starts on line 23, NTSC starts on line 16?
-static const u16 activeVideoLineEnd				= 50 + FRAME_BUF_HEIGHT;
+static const u16 activeVideoLineStart			= 55;				// PAL starts on line 23, NTSC starts on line 16?
+static const u16 activeVideoLineEnd				= 55 + FRAME_BUF_HEIGHT;
 
 u32 calcNanosecsFromAPB1TimerTicks(u16 ticks)
 {

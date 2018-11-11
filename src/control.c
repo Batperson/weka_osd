@@ -89,12 +89,14 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF1, 0x01);	// RGB on AIN4,5,6
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_AD_ENABLE, DEC_AD_PAL_EN | DEC_AD_NTSC_EN | DEC_AD_PALM_EN | DEC_AD_PALN_EN);	// Disable SECAM autodetect
 
-	// Adjust the position of HSYNC, so it reflects the timing of the CVBS input rather than the digital output
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x34, 0x33);	// HS Control
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x35, 0x51);	// HS Control
-	I2C_WriteByte(I2C1, ADDR_DECODER, 0x36, 0x50);	// HS Control
-
 	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x88, 0x00);	// 8-bit input
+
+	// Adjust the position of HSYNC, so it reflects the timing of the CVBS input rather than the digital output
+	//I2C_WriteByte(I2C1, ADDR_DECODER, 0x34, 0x33);	// HS Control
+	//I2C_WriteByte(I2C1, ADDR_DECODER, 0x35, 0x51);	// HS Control
+	//I2C_WriteByte(I2C1, ADDR_DECODER, 0x36, 0x50);	// HS Control
+
+	setHSyncTiming(1061, 860);
 
 	setFastBlankMode(FBModeDynamicEdgeEnhanced);
 	setFastBlankContrastReductionMode(FBContrastReductionEnabled);

@@ -44,6 +44,9 @@ typedef struct
 
 extern MODEL model;
 
+#define DEREFERENCE_OFFSET_FLOAT(ofs) *((float*)(((void*)&model)+ofs))
+#define DEREFERENCE_OFFSET_INT(ofs) *((int*)(((void*)&model)+ofs))
+
 void demoModelUpdate();
 
 #endif /* MODEL_H_ */

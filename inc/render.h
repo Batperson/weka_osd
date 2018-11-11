@@ -28,6 +28,7 @@ typedef struct
 typedef struct
 {
 	RENDERER hdr;
+	u16 valueOffset;
 	u8 unitsPerDivision;
 	u8 pixelsPerDivision;
 	u8 majorDivisionIntervals;

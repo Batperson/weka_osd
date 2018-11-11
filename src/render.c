@@ -43,6 +43,7 @@ void renderArtificialHorizon(PRENDERER r)
 
 #define LINE_RENDER_BATCH 6
 
+
 void renderTape(PRENDERER r)
 {
 	PTAPE pt = (PTAPE)r;
@@ -52,7 +53,7 @@ void renderTape(PRENDERER r)
 	char sz[6];
 	LINE lines[LINE_RENDER_BATCH];
 
-	float value		= model.loc.altitude;
+	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
 	DU offset	  	= nearbyintf(fmodf(value, pt->unitsPerDivision) * pt->pixelsPerDivision);
 
 	DU midPoint 	= pt->hdr.rect.height >> 1;
@@ -129,7 +130,7 @@ void INTERRUPT IN_CCM PendSV_Handler()
 
 	clearRenderBuf();
 
-	RECT rc = { 20, 10, 120, 20 };
+	RECT rc = { 30, 10, 120, 20 };
 	drawTestPattern(&rc);
 
 	if(blinkOn())
@@ -138,8 +139,10 @@ void INTERRUPT IN_CCM PendSV_Handler()
 		drawText(&rc2, &systemFont, RED, AlignLeft, "ARMED");
 	}
 
-	TAPE tp = { { 0, { 268, 0, 20, 200 }, RGB(0,2,0), NULL }, 1, 20, 5, 8, 4 };
+	TAPE tp = { { RF_NONE,         { 268, 0, 20, 200 }, RGB(0,2,0), NULL }, offsetof(MODEL, loc.altitude), 1, 20, 5, 8, 4 };
+	TAPE tp2 = { { RF_ALIGN_RIGHT, { 1, 0, 20, 200 }, RGB(0,2,0), NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 8, 4 };
 	renderTape(&tp.hdr);
+	renderTape(&tp2.hdr);
 
 	RENDERER ahi = { 0, { 0, 0, 300, 200 }, RGB(0,2,0), NULL };
 	renderArtificialHorizon(&ahi);
