@@ -20,6 +20,8 @@
 #define DEGREE_PIXEL_RATIO 4
 
 extern FONT systemFont;
+extern char szBtn0Msg[];
+extern char szBtn1Msg[];
 
 void renderArtificialHorizon(PRENDERER r)
 {
@@ -130,22 +132,30 @@ void INTERRUPT IN_CCM PendSV_Handler()
 
 	clearRenderBuf();
 
+	COLOUR clr = RGB(0,3,0);
+
 	RECT rc = { 30, 10, 120, 20 };
 	drawTestPattern(&rc);
 
+	RECT rc2 = { 200, 170, 60, 20 };
 	if(blinkOn())
 	{
-		RECT rc2 = { 200, 170, 60, 20 };
 		drawText(&rc2, &systemFont, RED, AlignLeft, "ARMED");
 	}
 
-	TAPE tp = { { RF_NONE,         { 268, 0, 20, 200 }, RGB(0,2,0), NULL }, offsetof(MODEL, loc.altitude), 1, 20, 5, 8, 4 };
-	TAPE tp2 = { { RF_ALIGN_RIGHT, { 1, 0, 20, 200 }, RGB(0,2,0), NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 8, 4 };
+	rc2.top = 100;
+	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn0Msg);
+
+	rc2.top = 120;
+	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn1Msg);
+
+	TAPE tp = { { RF_NONE,         { 268, 0, 20, 200 }, clr, NULL }, offsetof(MODEL, loc.altitude), 1, 20, 5, 8, 4 };
+	TAPE tp2 = { { RF_ALIGN_RIGHT, { 1, 0, 20, 200 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 8, 4 };
 	renderTape(&tp.hdr);
 	renderTape(&tp2.hdr);
 
-	RENDERER ahi = { 0, { 0, 0, 300, 200 }, RGB(0,2,0), NULL };
-	renderArtificialHorizon(&ahi);
+	RENDERER ahi = { 0, { 0, 0, 300, 200 }, clr, NULL };
+	//renderArtificialHorizon(&ahi);
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;

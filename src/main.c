@@ -18,6 +18,8 @@
 
   PB6-7			I2C SCL and SDA output
 
+  PE3-4			User buttons
+
   PF0-7			Pixel bus output
   PF9-10		LEDs, active low
 
@@ -34,6 +36,9 @@ void initDebug()
 	DWT->CTRL |= 1 ;	// Enable CPU cycle counter
 }
 
+IN_CCM char szBtn0Msg[20];
+IN_CCM char szBtn1Msg[20];
+
 int main(void)
 {
 
@@ -48,7 +53,8 @@ int main(void)
   *  E.g.  SCB->VTOR = 0x20000000;
   */
 
-  /* NOTE - do we need this? */
+  printf("WekaOSD 0.01\r\n");
+
   SystemCoreClockUpdate();
   initDebug();
 
@@ -58,13 +64,43 @@ int main(void)
   sleep(400);
 
   initLeds();
+  initUserButtons();
   initI2C1();
   initVideoChips();
   initSystem();
   initVideo();
 
+  sprintf(szBtn0Msg, "TEST0");
+  sprintf(szBtn1Msg, "TEST1");
+
   while (1)
   {
 
   }
+}
+
+u8 cti = 0;
+
+void INTERRUPT IN_CCM EXTI3_IRQHandler()
+{
+	EXTI_ClearITPendingBit(EXTI_Line3);
+
+	if(cti == 0)
+	{
+		setDecoderCtiEnabled(1);
+		cti = 1;
+	}
+	else
+	{
+		setDecoderCtiEnabled(0);
+		cti = 0;
+	}
+
+	u8 v = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1);
+	sprintf(szBtn0Msg, "CTI1: %d", v);
+}
+
+void INTERRUPT IN_CCM EXTI4_IRQHandler()
+{
+	EXTI_ClearITPendingBit(EXTI_Line4);
 }

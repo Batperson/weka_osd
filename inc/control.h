@@ -123,6 +123,7 @@ typedef enum {
 } DNRFilterType;
 
 void initLeds();
+void initUserButtons();
 void initVideoChips();
 void showTestPattern();
 void setVideoInput(INSELType ain);
@@ -145,6 +146,12 @@ void setHSyncTiming(u16 hsyncStart, u16 hsyncEnd);
 void setDnrGain(u8 coringGainBorder, u8 coringGainData);
 void setDnrThreshold(u8 threshold, DNRBorderAreaType borderSize, DNRBlockSizeType blockSize);
 void setDnrMode(DNRFilterType filter, DNRModeType mode, u8 blockOffset);
+
+void setDecoderCtiEnabled(u8 enable);
+void setDecoderCtiAlphaBlendEnabled(u8 enable);
+void setDecoderDnrEnabled(u8 enable);
+void setDecoderCtiChromaTheshold(u8 threshold);
+void setDecoderDnrNoiseTheshold(u8 threshold);
 
 // The LEDs are effectively active-low because they are connected to VCC and the GPIO is GND. Set to 0 to turn the LEDs on.
 typedef enum {

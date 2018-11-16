@@ -15,17 +15,58 @@ void initLeds()
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOF, ENABLE);
 
 	/* Initialize PF9, PF10 for LED blinking */
-	GPIO_InitTypeDef		GPIO_InitStructure;
+	GPIO_InitTypeDef		gpio;
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOF, &GPIO_InitStructure);
+	gpio.GPIO_Pin 	= GPIO_Pin_9 | GPIO_Pin_10;
+	gpio.GPIO_Mode 	= GPIO_Mode_OUT;
+	gpio.GPIO_Speed = GPIO_Speed_2MHz;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd 	= GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOF, &gpio);
 
 	setLed1(OFF);
 	setLed2(OFF);
+}
+
+void initUserButtons()
+{
+	/* Clock to GPIOE */
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+
+	GPIO_InitTypeDef		gpio;
+	EXTI_InitTypeDef 		exti;
+	NVIC_InitTypeDef 		nvic;
+
+	/* Enable GPIO PE3, PE4 */
+	gpio.GPIO_Pin 							= GPIO_Pin_3 | GPIO_Pin_4;
+	gpio.GPIO_Mode 							= GPIO_Mode_IN;
+	gpio.GPIO_PuPd 							= GPIO_PuPd_UP;
+	GPIO_Init(GPIOE, &gpio);
+
+	/* GPIOE is source for EXTI line 3 and 4 */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOE, EXTI_PinSource3);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOE, EXTI_PinSource4);
+
+	/* Configure interrupts for falling edge on EXTI 3 and 4 */
+	exti.EXTI_Line 							= EXTI_Line3;
+	exti.EXTI_LineCmd						= ENABLE;
+	exti.EXTI_Mode 							= EXTI_Mode_Interrupt;
+	exti.EXTI_Trigger 						= EXTI_Trigger_Falling;
+	EXTI_Init(&exti);
+
+	exti.EXTI_Line 							= EXTI_Line4;
+	EXTI_Init(&exti);
+
+	/* Configure interrupt vectors and enable interrupt for EXTI 3 and 4 */
+	nvic.NVIC_IRQChannel 					= EXTI3_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority 	= 0x06;
+	nvic.NVIC_IRQChannelSubPriority 		= 0x00;
+	nvic.NVIC_IRQChannelCmd 				= ENABLE;
+	NVIC_Init(&nvic);
+
+	nvic.NVIC_IRQChannel 					= EXTI4_IRQn;
+	NVIC_Init(&nvic);
 }
 
 void initVideoChips()
@@ -101,6 +142,8 @@ void initVideoChips()
 
 	//setDnrMode(DNRFilterNone, DNRModeSharpness, 0);
 	//setDnrGain(5, 5);
+
+	printf("Decoder and encoder configured\r\n");
 }
 
 void showTestPattern()
@@ -267,5 +310,42 @@ void setDnrMode(DNRFilterType filter, DNRModeType mode, u8 blockOffset)
 	u8 v  = ((blockOffset & 0x0f) << 4) | filter | mode;
 
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2, v);
+}
+
+void setDecoderCtiEnabled(u8 enable)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1);
+	v		&= ~(0x01);
+	v		|= (enable & 0x01);
+
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1, v);
+}
+
+void setDecoderCtiAlphaBlendEnabled(u8 enable)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1);
+	v 		&= ~(0x01 << 1);
+	v		|= ((enable & 0x01) << 1);
+
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1, v);
+}
+
+void setDecoderDnrEnabled(u8 enable)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1);
+	v 		&= ~(0x01 << 5);
+	v		|= ((enable & 0x01) << 5);
+
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1, v);
+}
+
+void settDecoderCtiChromaTheshold(u8 threshold)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_2, threshold);
+}
+
+void settDecoderDnrNoiseTheshold(u8 threshold)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_4, threshold);
 }
 

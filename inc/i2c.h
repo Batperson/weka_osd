@@ -75,6 +75,9 @@
 
 #define REG_DEC_HSE						0x34
 #define REG_DEC_PIN_POLARITY			0x37
+#define REG_DEC_CTI_DNR_1				0x4d
+#define REG_DEC_CTI_DNR_2				0x4e
+#define REG_DEC_CTI_DNR_4				0x50
 
 // Encoder defines
 #define ADDR_ENCODER					0x56
