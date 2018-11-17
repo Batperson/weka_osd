@@ -80,7 +80,9 @@ typedef enum
 typedef enum
 {
 	AlignLeft	= 0x00,
-	AlignRight	= 0x01
+	AlignTop	= 0x00,
+	AlignRight	= 0x01,
+	AlignBottom	= 0x02
 } AlignmentType;
 
 typedef struct

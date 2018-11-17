@@ -34,6 +34,7 @@ typedef struct
 	u8 majorDivisionIntervals;
 	u8 majorDivisionWidth;
 	u8 minorDivisionWidth;
+	PFONT font;
 } TAPE, *PTAPE;
 
 #endif /* RENDER_H_ */

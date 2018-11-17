@@ -134,14 +134,10 @@ void initVideoChips()
 	// Adjust the position of HSYNC, so it reflects the timing of the CVBS input rather than the digital output
 	setHSyncTiming(1061, 860);
 
-	setFastBlankMode(FBModeDynamicEdgeEnhanced);
+	setFastBlankMode(FBModeDynamic);
 	setFastBlankContrastReductionMode(FBContrastReductionEnabled);
 	setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
-	setFastBlankEdgeShapeLevel(FBEdgeShapeLevel4);
 	setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold3);
-
-	//setDnrMode(DNRFilterNone, DNRModeSharpness, 0);
-	//setDnrGain(5, 5);
 
 	printf("Decoder and encoder configured\r\n");
 }

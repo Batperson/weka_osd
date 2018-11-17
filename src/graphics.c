@@ -86,7 +86,7 @@ void drawArrow(PRECT rect, COLOUR foreground, COLOUR background, AlignmentType a
 {
 	DU bt	= rect->top + rect->height - 1;
 	DU ao	= rect->height >> 1;
-	DU l 	= (alignment == AlignRight) ? rect->left + ao : rect->left;
+	DU l 	= (alignment & AlignRight) ? rect->left + ao : rect->left;
 	DU w 	= rect->width - ao;
 	DU mp	= rect->top + ao;
 
@@ -223,9 +223,9 @@ void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment
 {
 	DU x, y;
 	char* sz;
-	int s;
+	int sx, sy;
 
-	if(alignment == AlignRight)
+	if(alignment & AlignRight)
 	{
 		int l = strlen(text);
 		DU w  = l * font->charwidth;
@@ -236,27 +236,39 @@ void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment
 		if(x < rect->left)
 		{
 			sz = text + (w / font->charwidth);
-			s = (w % font->charwidth);
+			sx = (w % font->charwidth);
 		}
 		else
 		{
 			sz = text;
-			s = 0;
+			sx = 0;
 		}
 	}
 	else
 	{
-		s = 0;
+		sx = 0;
 		sz = text;
 		x = rect->left;
 		y = rect->top;
+	}
+
+	if(alignment & AlignBottom)
+	{
+		DU d;
+		y = (rect->top + rect->height) - font->charheight;
+		if((d = y - rect->top) < 0)
+			sy = -d;
+	}
+	else
+	{
+		sy = 0;
 	}
 
 	register u32 brush = foreground | (foreground << 8) | (foreground << 16) | (foreground << 24);
 
 	while(*sz)
 	{
-		for(int i=0; i<font->charheight; i++)
+		for(int i=sy; i<font->charheight; i++)
 		{
 			PPIXEL dest = ptToOffset(x, y + i);
 
@@ -266,7 +278,7 @@ void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment
 			register u8 dwp		= ((u32)dest & 0x3);
 			register u8 sbp		= 0;
 
-			for(int j=s; j<font->charwidth; j++)
+			for(int j=sx; j<font->charwidth; j++)
 			{
 				if((x + j) >= (rect->left + rect->width))
 					break;
@@ -307,7 +319,7 @@ void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment
 				break;
 		}
 
-		s = 0;
+		sx = 0;
 		sz++;
 
 		if((x += font->charwidth) >= rect->left + rect->width)

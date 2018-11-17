@@ -79,28 +79,42 @@ int main(void)
   }
 }
 
-u8 cti = 0;
+u8 fbEdge = 0;
+u16 hsyncStart = 1061;
 
 void INTERRUPT IN_CCM EXTI3_IRQHandler()
 {
 	EXTI_ClearITPendingBit(EXTI_Line3);
 
-	if(cti == 0)
+	FBModeType fm;
+	if(fbEdge++ >= 8)
 	{
-		setDecoderCtiEnabled(1);
-		cti = 1;
+		fm = FBModeDynamicEdgeEnhanced;
+		fbEdge = 0;
 	}
 	else
 	{
-		setDecoderCtiEnabled(0);
-		cti = 0;
+		fm = FBModeDynamicEdgeEnhanced;
 	}
 
-	u8 v = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1);
-	sprintf(szBtn0Msg, "CTI1: %d", v);
+	setFastBlankMode(fm);
+	setFastBlankEdgeShapeLevel(fbEdge);
+
+	u8 v = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL3);
+	sprintf(szBtn0Msg, "DNR: %d", v);
 }
 
 void INTERRUPT IN_CCM EXTI4_IRQHandler()
 {
 	EXTI_ClearITPendingBit(EXTI_Line4);
+
+	if(TIM8->ARR++ >= 40)
+		TIM8->ARR = 14;
+
+	if((hsyncStart -= 14) <= 861)
+		hsyncStart = 1061;
+
+	setHSyncTiming(hsyncStart, 860);
+
+	sprintf(szBtn1Msg, "TIM8: %d", (int)TIM8->ARR);
 }

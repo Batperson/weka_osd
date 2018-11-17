@@ -50,10 +50,10 @@ void renderTape(PRENDERER r)
 {
 	PTAPE pt = (PTAPE)r;
 
-	drawRect(&pt->hdr.rect, SEMITRANSPARENT, SEMITRANSPARENT);
-
 	char sz[6];
 	LINE lines[LINE_RENDER_BATCH];
+	AlignmentType align;
+	RECT rc;
 
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
 	DU offset	  	= nearbyintf(fmodf(value, pt->unitsPerDivision) * pt->pixelsPerDivision);
@@ -63,18 +63,28 @@ void renderTape(PRENDERER r)
 	int divsAbove	= divs.quot >> 1;
 	DU startPoint	= (midPoint - (divsAbove * pt->pixelsPerDivision)) + offset;
 
+	rc.width 	= pt->hdr.rect.width - (pt->majorDivisionWidth + 2);
+
 	DU x1, x2, x3;
 	if(pt->hdr.flags & RF_ALIGN_RIGHT)
-	{
-		x1 = pt->hdr.rect.left;
-		x2 = x1 + pt->minorDivisionWidth;
-		x3 = x1 + pt->majorDivisionWidth;
-	}
-	else
 	{
 		x1 = pt->hdr.rect.left + pt->hdr.rect.width;
 		x2 = x1 - pt->minorDivisionWidth;
 		x3 = x1 - pt->majorDivisionWidth;
+
+		rc.left = pt->hdr.rect.left;
+
+		align = AlignRight;
+	}
+	else
+	{
+		x1 = pt->hdr.rect.left;
+		x2 = x1 + pt->minorDivisionWidth;
+		x3 = x1 + pt->majorDivisionWidth;
+
+		rc.left = x3 + 2;
+
+		align = AlignLeft;
 	}
 
 	int currentUnit = ((value / pt->unitsPerDivision) * pt->unitsPerDivision) + (divsAbove * pt->unitsPerDivision);
@@ -85,9 +95,34 @@ void renderTape(PRENDERER r)
 		for(int i=0; i<lcnt; i++)
 		{
 			lines[i].p1.x	= x1;
-			lines[i].p2.x	= (currentUnit % majorUnit == 0) ? x3 : x2;
+			lines[i].p2.x	= x2;
 			lines[i].p1.y	= startPoint;
 			lines[i].p2.y	= startPoint;
+
+			if(currentUnit % majorUnit == 0)
+			{
+				lines[i].p2.x = x3;
+
+				align			= (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignRight : AlignLeft;
+				rc.top			= startPoint - (pt->font->charheight >> 1);
+				rc.height		= pt->font->charheight;
+
+				DU disc;
+				if((disc = rc.top - pt->hdr.rect.top) < 0)
+				{
+					rc.top 		-= disc;
+					rc.height 	+= disc;
+					align		|= AlignBottom;
+				}
+				else if((disc = (rc.top + rc.height) - (pt->hdr.rect.top + pt->hdr.rect.height)) > 0)
+				{
+					rc.height -= disc;
+				}
+
+				sprintf(sz, "%d", currentUnit);
+
+				drawText(&rc, pt->font, pt->hdr.colour, align, sz);
+			}
 
 			currentUnit		-= pt->unitsPerDivision;
 			startPoint		+= pt->pixelsPerDivision;
@@ -98,31 +133,23 @@ void renderTape(PRENDERER r)
 		divs.quot -= lcnt;
 	}
 
-	DU arrowHeight			= 13;
+	DU arrowHeight			= pt->font->charheight + 4;
 	DU arrowWidth			= 30;
 
-	RECT rc;
-	rc.left					= (pt->hdr.flags & RF_ALIGN_RIGHT) ? pt->hdr.rect.left : (pt->hdr.rect.left + pt->hdr.rect.width) - arrowWidth;
+	rc.left					= (pt->hdr.flags & RF_ALIGN_RIGHT) ? (pt->hdr.rect.left + pt->hdr.rect.width) - arrowWidth : pt->hdr.rect.left;
 	rc.top					= midPoint - (arrowHeight >> 1);
 	rc.width				= arrowWidth;
 	rc.height				= arrowHeight;
 
-	drawArrow(&rc, pt->hdr.colour, SEMITRANSPARENT, (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignRight : AlignLeft);
+	drawArrow(&rc, pt->hdr.colour, SEMITRANSPARENT, (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );
 
 	rc.top += 2;
+	rc.left += (pt->hdr.flags & RF_ALIGN_RIGHT) ? 1 : arrowHeight >> 1;
 	rc.width -= arrowHeight >> 1;
 
 	sprintf(sz, "%d", (int)truncf(value));
-	if(pt->hdr.flags & RF_ALIGN_RIGHT)
-	{
-		rc.left += (arrowHeight >> 1);
-		drawText(&rc, &systemFont, pt->hdr.colour, AlignLeft, sz);
-	}
-	else
-	{
-		rc.left += 1;
-		drawText(&rc, &systemFont, pt->hdr.colour, AlignRight, sz);
-	}
+
+	drawText(&rc, pt->font, pt->hdr.colour, align, sz);
 }
 
 void INTERRUPT IN_CCM PendSV_Handler()
@@ -149,13 +176,13 @@ void INTERRUPT IN_CCM PendSV_Handler()
 	rc2.top = 120;
 	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn1Msg);
 
-	TAPE tp = { { RF_NONE,         { 268, 0, 20, 200 }, clr, NULL }, offsetof(MODEL, loc.altitude), 1, 20, 5, 8, 4 };
-	TAPE tp2 = { { RF_ALIGN_RIGHT, { 1, 0, 20, 200 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 8, 4 };
+	TAPE tp = { { RF_ALIGN_RIGHT, { 268, 0, 20, 200 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
+	TAPE tp2 = { { RF_NONE,       { 1,   0, 20, 200 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 4, 2, &systemFont };
 	renderTape(&tp.hdr);
 	renderTape(&tp2.hdr);
 
 	RENDERER ahi = { 0, { 0, 0, 300, 200 }, clr, NULL };
-	//renderArtificialHorizon(&ahi);
+	renderArtificialHorizon(&ahi);
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;
