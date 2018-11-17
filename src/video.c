@@ -24,7 +24,7 @@ static const u16 pixelOutputNanoseconds			= 52000;
 static const u16 pixelsPerLine					= FRAME_BUF_WIDTH;	// PAL = 768*576, NTSC = 640*480
 static const u16 pixelClockCycles				= 20; 				// 28 // calcAPB2TimerPeriod(pixelOutputNanoseconds / pixelsPerLine);
 static const u16 activeVideoLineStart			= 55;				// PAL starts on line 23, NTSC starts on line 16?
-static const u16 activeVideoLineEnd				= 55 + FRAME_BUF_HEIGHT;
+static const u16 activeVideoLineEnd				= 55 + (FRAME_BUF_HEIGHT-1);
 
 u32 calcNanosecsFromAPB1TimerTicks(u16 ticks)
 {
@@ -219,13 +219,13 @@ void initPixelDma()
 	dmai.DMA_PeripheralInc 			= DMA_PeripheralInc_Disable;
 	dmai.DMA_MemoryInc 				= DMA_MemoryInc_Enable;
 	dmai.DMA_PeripheralDataSize 	= DMA_PeripheralDataSize_Byte;
-	dmai.DMA_MemoryDataSize 		= DMA_MemoryDataSize_Byte; //DMA_MemoryDataSize_Word;
+	dmai.DMA_MemoryDataSize 		= DMA_MemoryDataSize_Word;
 	dmai.DMA_Mode 					= DMA_Mode_Normal;
 	dmai.DMA_Priority 				= DMA_Priority_VeryHigh;
 	dmai.DMA_Channel 				= DMA_Channel_7;
-	dmai.DMA_FIFOMode 				= DMA_FIFOMode_Disable; //DMA_FIFOMode_Enable;
-	dmai.DMA_FIFOThreshold 			= DMA_FIFOThreshold_1QuarterFull; // DMA_FIFOThreshold_Full;	// Should this be DMA_FIFOThreshold_1QuarterFull to reduce contention?
-	dmai.DMA_MemoryBurst 			= DMA_MemoryBurst_Single; //DMA_MemoryBurst_INC4;
+	dmai.DMA_FIFOMode 				= DMA_FIFOMode_Enable;
+	dmai.DMA_FIFOThreshold 			= DMA_FIFOThreshold_Full;
+	dmai.DMA_MemoryBurst 			= DMA_MemoryBurst_INC4;
 	dmai.DMA_PeripheralBurst 		= DMA_PeripheralBurst_Single;
 	DMA_Init(DMA2_Stream1, &dmai);
 

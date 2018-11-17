@@ -41,6 +41,9 @@ void renderArtificialHorizon(PRENDERER r)
 	rotatePts((PPOINT)lines, sizeof(lines) / sizeof(POINT), &ctr, model.att.roll);
 	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), 0, model.att.pitch);
 	drawLines(lines, sizeof(lines) / sizeof(LINE), r->colour, NULL);
+
+	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), -1, -1);
+	drawLines(lines, sizeof(lines) / sizeof(LINE), BLACK, NULL);
 }
 
 #define LINE_RENDER_BATCH 6
@@ -130,6 +133,9 @@ void renderTape(PRENDERER r)
 
 		drawLines(lines, lcnt, pt->hdr.colour, &pt->hdr.rect);
 
+		offsetPts((PPOINT)lines, lcnt * 2, 0, -1);
+		drawLines(lines, lcnt, SEMITRANSPARENT, &pt->hdr.rect);
+
 		divs.quot -= lcnt;
 	}
 
@@ -141,7 +147,7 @@ void renderTape(PRENDERER r)
 	rc.width				= arrowWidth;
 	rc.height				= arrowHeight;
 
-	drawArrow(&rc, pt->hdr.colour, SEMITRANSPARENT, (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );
+	drawArrow(&rc, pt->hdr.colour, BLACK, (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );
 
 	rc.top += 2;
 	rc.left += (pt->hdr.flags & RF_ALIGN_RIGHT) ? 1 : arrowHeight >> 1;
@@ -174,6 +180,7 @@ void INTERRUPT IN_CCM PendSV_Handler()
 	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn0Msg);
 
 	rc2.top = 120;
+	drawRect(&rc2, BLACK, BLACK);
 	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn1Msg);
 
 	TAPE tp = { { RF_ALIGN_RIGHT, { 268, 0, 20, 200 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
