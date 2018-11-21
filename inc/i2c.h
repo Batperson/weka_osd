@@ -90,6 +90,7 @@
 #define REG_ENC_SD_MODE_1				0x80
 #define REG_ENC_SD_MODE_2				0x82
 #define REG_ENC_SD_MODE_7				0x88
+#define REG_ENC_DAC_LOW_POWER			0x0D
 
 void initI2C1();
 u8 I2C_ReadByte(I2C_TypeDef* pI2c, u8 slaveAddr, u8 ReadAddr);

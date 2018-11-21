@@ -288,6 +288,14 @@ void setHSyncTiming(u16 hsyncStart, u16 hsyncEnd)
 	I2C_BufferWrite(I2C1, ADDR_DECODER, REG_DEC_HSE, vals, 3);
 }
 
+void setLowPowerMode(EncoderLowPowerModeType lowPowerEnable)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DAC_LOW_POWER);
+	v = (v & ~(LowPowerDAC1 | LowPowerDAC2 | LowPowerDAC3)) | lowPowerEnable;
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DAC_LOW_POWER, v);
+}
+
 void setDnrEnabled(DNREnabledType dnrEnable)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_7);

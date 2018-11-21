@@ -154,6 +154,12 @@ typedef enum {
 	PrPbSSAFEnabled						= 0x01,
 } PrPbSSAFEnabledType;
 
+typedef enum {
+	LowPowerDAC1						= 0x01,
+	LowPowerDAC2						= 0x02,
+	LowPowerDAC3						= 0x04,
+} EncoderLowPowerModeType;
+
 void initLeds();
 void initUserButtons();
 void initVideoChips();
@@ -184,6 +190,7 @@ void setDnrBlockOffset(u8 offset);
 void setLumaFilter(LumaFilterType filter);
 void setChromaFilter(ChromaFilterType filter);
 void setPrPbSSAFEnabled(PrPbSSAFEnabledType enable);
+void setLowPowerMode(EncoderLowPowerModeType enable);
 
 void setDecoderCtiEnabled(u8 enable);
 void setDecoderCtiAlphaBlendEnabled(u8 enable);
