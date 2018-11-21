@@ -149,6 +149,11 @@ typedef enum {
 	Chroma3_0MHz						= 0xE0
 } ChromaFilterType;
 
+typedef enum {
+	PrPbSSAFDisabled					= 0x00,
+	PrPbSSAFEnabled						= 0x01,
+} PrPbSSAFEnabledType;
+
 void initLeds();
 void initUserButtons();
 void initVideoChips();
@@ -178,7 +183,7 @@ void setDnrMode(DNRModeType mode);
 void setDnrBlockOffset(u8 offset);
 void setLumaFilter(LumaFilterType filter);
 void setChromaFilter(ChromaFilterType filter);
-
+void setPrPbSSAFEnabled(PrPbSSAFEnabledType enable);
 
 void setDecoderCtiEnabled(u8 enable);
 void setDecoderCtiAlphaBlendEnabled(u8 enable);

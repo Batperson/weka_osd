@@ -85,12 +85,11 @@ void INTERRUPT IN_CCM EXTI3_IRQHandler()
 {
 	EXTI_ClearITPendingBit(EXTI_Line3);
 
-	setDnrEnabled(DNREnabled);
-
 	dnr += 1;
 	if(dnr > 15)
 		dnr = 0;
 
+	setDnrEnabled(DNREnabled);
 	setDnrMode(dnr & 0x08);
 	setDnrFilter(dnr & 0x07);
 
@@ -109,6 +108,7 @@ void INTERRUPT IN_CCM EXTI4_IRQHandler()
 
 	chroma <<= 5;
 
+	setPrPbSSAFEnabled(PrPbSSAFDisabled);
 	setChromaFilter(chroma);
 
 	u8 v = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);

@@ -350,6 +350,14 @@ void setChromaFilter(ChromaFilterType filter)
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1, v);
 }
 
+void setPrPbSSAFEnabled(PrPbSSAFEnabledType enable)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_2);
+	v = (v & ~PrPbSSAFEnabled) | enable;
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_2, v);
+}
+
 void setDecoderCtiEnabled(u8 enable)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1);
