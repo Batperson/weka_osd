@@ -79,42 +79,39 @@ int main(void)
   }
 }
 
-u8 fbEdge = 0;
-u16 hsyncStart = 1061;
 
+u8 dnr = 0;
 void INTERRUPT IN_CCM EXTI3_IRQHandler()
 {
 	EXTI_ClearITPendingBit(EXTI_Line3);
 
-	FBModeType fm;
-	if(fbEdge++ >= 8)
-	{
-		fm = FBModeDynamicEdgeEnhanced;
-		fbEdge = 0;
-	}
-	else
-	{
-		fm = FBModeDynamicEdgeEnhanced;
-	}
+	setDnrEnabled(DNREnabled);
 
-	setFastBlankMode(fm);
-	setFastBlankEdgeShapeLevel(fbEdge);
+	dnr += 1;
+	if(dnr > 15)
+		dnr = 0;
 
-	u8 v = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL3);
-	sprintf(szBtn0Msg, "DNR: %d", v);
+	setDnrMode(dnr & 0x08);
+	setDnrFilter(dnr & 0x07);
+
+	u8 v = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2);
+	sprintf(szBtn0Msg, "DN2R: %d", v);
 }
 
+u8 chroma = 0;
 void INTERRUPT IN_CCM EXTI4_IRQHandler()
 {
 	EXTI_ClearITPendingBit(EXTI_Line4);
 
-	if(TIM8->ARR++ >= 40)
-		TIM8->ARR = 14;
+	chroma += 1;
+	if(chroma > 7)
+		chroma = 0;
 
-	if((hsyncStart -= 14) <= 861)
-		hsyncStart = 1061;
+	chroma <<= 5;
 
-	setHSyncTiming(hsyncStart, 860);
+	setChromaFilter(chroma);
 
-	sprintf(szBtn1Msg, "TIM8: %d", (int)TIM8->ARR);
+	u8 v = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);
+
+	sprintf(szBtn1Msg, "MOD1: %d", v);
 }

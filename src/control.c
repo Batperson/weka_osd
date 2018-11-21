@@ -4,6 +4,7 @@
  */
 
 #include "stm32f4xx.h"
+#include "stdio.h"
 #include "misc.h"
 #include "i2c.h"
 #include "bitband.h"
@@ -129,7 +130,7 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x04, 0x65);	// SFL off, ITU-R BT.656-3 compatible
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0xF1, 0x01);	// RGB on AIN4,5,6
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_AD_ENABLE, DEC_AD_PAL_EN | DEC_AD_NTSC_EN | DEC_AD_PALM_EN | DEC_AD_PALN_EN);	// Disable SECAM autodetect
-	I2C_WriteByte(I2C1, ADDR_ENCODER, 0x88, 0x00);	// 8-bit input
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_7, 0x00);	// 8-bit input
 
 	// Adjust the position of HSYNC, so it reflects the timing of the CVBS input rather than the digital output
 	setHSyncTiming(1061, 860);
@@ -287,6 +288,14 @@ void setHSyncTiming(u16 hsyncStart, u16 hsyncEnd)
 	I2C_BufferWrite(I2C1, ADDR_DECODER, REG_DEC_HSE, vals, 3);
 }
 
+void setDnrEnabled(DNREnabledType dnrEnable)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_7);
+	v = (v & ~DNREnabled) | dnrEnable;
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_7, v);
+}
+
 void setDnrGain(u8 coringGainBorder, u8 coringGainData)
 {
 	u8 v  = (coringGainBorder & 0x0f) | ((coringGainData & 0x0f) << 4);
@@ -301,11 +310,44 @@ void setDnrThreshold(u8 threshold, DNRBorderAreaType borderSize, DNRBlockSizeTyp
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_1, v);
 }
 
-void setDnrMode(DNRFilterType filter, DNRModeType mode, u8 blockOffset)
+void setDnrMode(DNRModeType mode)
 {
-	u8 v  = ((blockOffset & 0x0f) << 4) | filter | mode;
+	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2);
+	v = (v & 0xF7) | mode;
 
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2, v);
+}
+
+void setDnrFilter(DNRFilterType filter)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2);
+	v = (v & 0xF8) | filter;
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2, v);
+}
+
+void setDnrBlockOffset(u8 offset)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2);
+	v = (v & 0x0F) | (offset << 4);
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2, v);
+}
+
+void setLumaFilter(LumaFilterType filter)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);
+	v = (v & 0xE3) | filter;
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1, v);
+}
+
+void setChromaFilter(ChromaFilterType filter)
+{
+	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);
+	v = (v & 0x1F) | filter;
+
+	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1, v);
 }
 
 void setDecoderCtiEnabled(u8 enable)

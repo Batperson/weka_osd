@@ -100,6 +100,11 @@ typedef enum {
 } FreeRunForceActiveType;
 
 typedef enum {
+	DNRDisabled							= 0x00,
+	DNREnabled							= 0x20
+} DNREnabledType;
+
+typedef enum {
 	DNRBorderTwoPixels					= 0x00,
 	DNRBorderFourPixels					= 0x40
 } DNRBorderAreaType;
@@ -122,6 +127,28 @@ typedef enum {
 	DNRFilterD							= 0x04
 } DNRFilterType;
 
+typedef enum {
+	LumaLPFNTSC							= 0x00,
+	LumaLPFPAL							= 0x04,
+	LumaNotchNTSC						= 0x08,
+	LumaNotchPAL						= 0x0C,
+	LumaSSAF							= 0x10,
+	LumaCIF								= 0x14,
+	LumaQCIF							= 0x18,
+	LumaReserved						= 0x1C
+} LumaFilterType;
+
+typedef enum {
+	Chroma1_3MHz						= 0x00,
+	Chroma0_65MHz						= 0x20,
+	Chroma1_0MHz						= 0x40,
+	Chroma2_0MHz						= 0x60,
+	ChromaReserved						= 0x80,
+	ChromaCIF							= 0xA0,
+	ChromaQCIF							= 0xC0,
+	Chroma3_0MHz						= 0xE0
+} ChromaFilterType;
+
 void initLeds();
 void initUserButtons();
 void initVideoChips();
@@ -143,9 +170,15 @@ void setFastBlankEdgeShapeLevel(FBEdgeShapeLevelType fbesl);
 void setFastBlankThresholds(FBLevelThresholdType fbl, FBContrastThresholdType fbc);
 void setHSyncTiming(u16 hsyncStart, u16 hsyncEnd);
 
+void setDnrEnabled(DNREnabledType dnrEnable);
 void setDnrGain(u8 coringGainBorder, u8 coringGainData);
 void setDnrThreshold(u8 threshold, DNRBorderAreaType borderSize, DNRBlockSizeType blockSize);
-void setDnrMode(DNRFilterType filter, DNRModeType mode, u8 blockOffset);
+void setDnrFilter(DNRFilterType filter);
+void setDnrMode(DNRModeType mode);
+void setDnrBlockOffset(u8 offset);
+void setLumaFilter(LumaFilterType filter);
+void setChromaFilter(ChromaFilterType filter);
+
 
 void setDecoderCtiEnabled(u8 enable);
 void setDecoderCtiAlphaBlendEnabled(u8 enable);
