@@ -70,6 +70,8 @@ int main(void)
   initSystem();
   initVideo();
 
+  setLowPowerMode(LowPowerDAC1);
+
   sprintf(szBtn0Msg, "TEST0");
   sprintf(szBtn1Msg, "TEST1");
 
@@ -106,10 +108,8 @@ void INTERRUPT IN_CCM EXTI4_IRQHandler()
 	if(chroma > 7)
 		chroma = 0;
 
-	chroma <<= 5;
-
 	setPrPbSSAFEnabled(PrPbSSAFDisabled);
-	setChromaFilter(chroma);
+	setChromaFilter(chroma << 5);
 
 	u8 v = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);
 
