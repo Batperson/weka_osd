@@ -18,7 +18,7 @@ void initI2C1()
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 
 	/* Configure I2C_EE pins: SCL and SDA */
-	gp.GPIO_Pin 				= GPIO_Pin_6 | GPIO_Pin_7;
+	gp.GPIO_Pin 				= GPIO_Pin_8 | GPIO_Pin_9;
 	gp.GPIO_Speed 				= GPIO_Speed_50MHz;
 	gp.GPIO_Mode 				= GPIO_Mode_AF;
 	gp.GPIO_OType 				= GPIO_OType_OD;
@@ -26,8 +26,8 @@ void initI2C1()
 	GPIO_Init(GPIOB, &gp);
 
 	/* Note GPIO_PinSourceN not GPIO_Pin_N */
-	GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_I2C1);
-	GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_I2C1);
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_I2C1);
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1);
 
 	/* I2C configuration */
 	iic.I2C_Mode 				= I2C_Mode_I2C;

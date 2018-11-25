@@ -198,30 +198,39 @@ void setDecoderDnrEnabled(u8 enable);
 void setDecoderCtiChromaTheshold(u8 threshold);
 void setDecoderDnrNoiseTheshold(u8 threshold);
 
-// The LEDs are effectively active-low because they are connected to VCC and the GPIO is GND. Set to 0 to turn the LEDs on.
 typedef enum {
-	ON 	= 0x00,
-	OFF = 0x01
+	OFF 	= 0x00,
+	ON 		= 0x01
 } LEDStatusType;
 
 ALWAYS_INLINE void setLed1 (LEDStatusType status)
 {
-	OUTPUT_PIN(GPIOF, 9) = status;
+	OUTPUT_PIN(GPIOB, 0) = status;
 }
 
 ALWAYS_INLINE void setLed2(LEDStatusType status)
 {
-	OUTPUT_PIN(GPIOF, 10) = status;
+	OUTPUT_PIN(GPIOB, 7) = status;
+}
+
+ALWAYS_INLINE void setLed3(LEDStatusType status)
+{
+	OUTPUT_PIN(GPIOB, 14) = status;
 }
 
 ALWAYS_INLINE void toggleLed1()
 {
-	OUTPUT_PIN(GPIOF, 9) = !OUTPUT_PIN(GPIOF, 9);
+	OUTPUT_PIN(GPIOB, 0) = !OUTPUT_PIN(GPIOB, 0);
 }
 
 ALWAYS_INLINE void toggleLed2()
 {
-	OUTPUT_PIN(GPIOF, 10) = !OUTPUT_PIN(GPIOF, 10);
+	OUTPUT_PIN(GPIOB, 7) = !OUTPUT_PIN(GPIOB, 7);
+}
+
+ALWAYS_INLINE void toggleLed3()
+{
+	OUTPUT_PIN(GPIOB, 14) = !OUTPUT_PIN(GPIOB, 14);
 }
 
 #endif /* CONTROL_H_ */

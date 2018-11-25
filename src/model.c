@@ -9,7 +9,7 @@
 #include "model.h"
 #include "math.h"
 
-IN_CCM MODEL model;
+MODEL model;
 
 void demoModelUpdate()
 {
