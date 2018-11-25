@@ -21,8 +21,6 @@ static volatile PPIXEL currentOutputBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 static const u16 pixelOutputNanoseconds			= 52000;
-static const u16 pixelsPerLine					= FRAME_BUF_WIDTH;	// PAL = 768*576, NTSC = 640*480
-static const u16 pixelClockCycles				= 20; 				// 28 // calcAPB2TimerPeriod(pixelOutputNanoseconds / pixelsPerLine);
 static const u16 activeVideoLineStart			= 55;				// PAL starts on line 23, NTSC starts on line 16?
 static const u16 activeVideoLineEnd				= 55 + (FRAME_BUF_HEIGHT-1);
 
@@ -127,7 +125,7 @@ void initPixelClock()
 
 	timb.TIM_Prescaler 			= 0;
 	timb.TIM_CounterMode 		= TIM_CounterMode_Up;
-	timb.TIM_Period 			= pixelClockCycles;
+	timb.TIM_Period 			= calcAPB2TimerPeriod(pixelOutputNanoseconds / FRAME_BUF_WIDTH);
 	timb.TIM_ClockDivision 		= TIM_CKD_DIV1;
 	timb.TIM_RepetitionCounter 	= 0;
 	TIM_TimeBaseInit(TIM8, &timb);
@@ -247,7 +245,7 @@ void initPendSV()
 	NVIC_SetPriority(PendSV_IRQn, 255);
 }
 
-void INTERRUPT IN_CCM TIM2_IRQHandler()
+void INTERRUPT TIM2_IRQHandler()
 {
 	// Clear pending interrupt(s)
 	TIM2->SR = 0;
@@ -282,7 +280,7 @@ void INTERRUPT IN_CCM TIM2_IRQHandler()
 	toggleLed1();
 }
 
-void INTERRUPT IN_CCM DMA2_Stream1_IRQHandler()
+void INTERRUPT DMA2_Stream1_IRQHandler()
 {
 	// Clear all interrupt flags
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1 | DMA_LIFCR_CDMEIF1 | DMA_LIFCR_CFEIF1;

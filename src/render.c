@@ -158,7 +158,7 @@ void renderTape(PRENDERER r)
 	drawText(&rc, pt->font, pt->hdr.colour, align, sz);
 }
 
-void INTERRUPT IN_CCM PendSV_Handler()
+void INTERRUPT PendSV_Handler()
 {
 	// Reset cycle counter
 	DWT->CYCCNT = 0;
