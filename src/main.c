@@ -14,11 +14,12 @@
   PA0			HSYNC input (pixel start)
   PA1			VSYNC input
   PA2			FIELD input
+  PA3			INT input
   PA5			HSYNC input (line count)
 
   PB8-9			I2C SCL and SDA output
 
-  PE3-4			User buttons
+  PC13			User button
 
   PF0-7			Pixel bus output
   PF9-10		LEDs, active low

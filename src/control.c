@@ -36,7 +36,7 @@ void initLeds()
 
 void initUserButtons()
 {
-	/* Clock to GPIOE */
+	/* Clock to GPIOc */
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
@@ -50,7 +50,7 @@ void initUserButtons()
 	gpio.GPIO_PuPd 							= GPIO_PuPd_UP;
 	GPIO_Init(GPIOE, &gpio);
 
-	/* GPIOE is source for EXTI line 3 and 4 */
+	/* GPIOC is source for EXTI line 13 */
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource13);
 
 	/* Configure interrupts for falling edge on EXTI 13 */
@@ -131,12 +131,17 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_7, 0x00);	// 8-bit input
 
 	// Adjust the position of HSYNC, so it reflects the timing of the CVBS input rather than the digital output
-	setHSyncTiming(861, 660);
+	setHSyncTiming(880, 680);
 
 	setFastBlankMode(FBModeDynamic);
+	setFastBlankSource(FBSourceRgb);
 	setFastBlankContrastReductionMode(FBContrastReductionEnabled);
 	setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
 	setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold3);
+
+	setInterruptConfig(DriveActiveLow | DurationActiveUntilCleared);
+	setInterrupt1Mask(Lock | FreeRun);
+	setInterrupt3Mask(SDAutodetectResult);
 
 	printf("Decoder and encoder configured\r\n");
 }
@@ -443,5 +448,98 @@ void settDecoderCtiChromaTheshold(u8 threshold)
 void settDecoderDnrNoiseTheshold(u8 threshold)
 {
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_4, threshold);
+}
+
+Status1Type getDecoderStatus1()
+{
+	return I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_STATUS1);
+}
+
+Status2Type getDecoderStatus2()
+{
+	return I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_STATUS2);
+}
+
+Status3Type getDecoderStatus3()
+{
+	return I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_STATUS3);
+}
+
+void setUserSubMap(UserSubMapType usr)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, usr);
+}
+
+void setInterruptConfig(InterruptConfigType config)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INTERRUPT_CONFIG, config);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+void setInterruptClear(Interrupt1Type clr1, Interrupt3Type clr3)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_1_CLEAR, clr1);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_CLEAR, clr3);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+Interrupt1Type getInterrupt1ChangeStatus()
+{
+	Interrupt1Type ret;
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	ret = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_1_STATUS);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+
+	return ret;
+}
+
+void setInterrupt1Clear(Interrupt1Type clr)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_1_CLEAR, clr);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+void setInterrupt1Mask(Interrupt1Type msk)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_1_MASK, msk);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+Interrupt3Type getInterrupt3RawStatus()
+{
+	Interrupt3Type ret;
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	ret = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_RAW_STATUS);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+
+	return ret;
+}
+
+Interrupt3Type getInterrupt3ChangeStatus()
+{
+	Interrupt3Type ret;
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	ret = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_STATUS);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+
+	return ret;
+}
+
+void setInterrupt3Clear(Interrupt3Type clr)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_CLEAR, clr);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+void setInterrupt3Mask(Interrupt3Type msk)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_MASK, msk);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
 }
 
