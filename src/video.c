@@ -21,8 +21,8 @@ static volatile PPIXEL currentOutputBuf;
 
 // This is working code for now, later will probably incorporate into PAL/NTSC-specific section.
 static const u16 pixelOutputNanoseconds			= 52000;
-static const u16 activeVideoLineStart			= 55;				// PAL starts on line 23, NTSC starts on line 16?
-static const u16 activeVideoLineEnd				= 55 + (FRAME_BUF_HEIGHT-1);
+static const u16 activeVideoLineStart			= 23;				// PAL starts on line 23, NTSC starts on line 16?
+static const u16 activeVideoLineEnd				= 23 + (FRAME_BUF_HEIGHT-1);
 
 u32 calcNanosecsFromAPB1TimerTicks(u16 ticks)
 {
@@ -63,7 +63,9 @@ void initRCC()
 
 void initSyncPort()
 {
-	GPIO_InitTypeDef gpio;
+	GPIO_InitTypeDef 	gpio;
+	EXTI_InitTypeDef 	exti;
+	NVIC_InitTypeDef 	nvic;
 
 	/* Configure PA0 for TIM8 ETR (HSYNC to start pixel clock), datasheet page 62 */
 	GPIO_StructInit(&gpio);
@@ -91,17 +93,33 @@ void initSyncPort()
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource5, GPIO_AF_TIM2);
 	GPIO_Init(GPIOA, &gpio);
 
-
-	/* Configure PA2 as external input (This will be FIELD) */
+	/* Configure PA2 and PA3 as external input (This will be FIELD and INT) */
 	GPIO_StructInit(&gpio);
 
-	gpio.GPIO_Pin 		= GPIO_Pin_2;
+	gpio.GPIO_Pin 		= GPIO_Pin_2 | GPIO_Pin_3;
 	gpio.GPIO_Mode 		= GPIO_Mode_IN;
 	gpio.GPIO_Speed 	= GPIO_Speed_50MHz;
 	gpio.GPIO_OType 	= GPIO_OType_PP;
 	gpio.GPIO_PuPd 		= GPIO_PuPd_NOPULL;
 
 	GPIO_Init(GPIOA, &gpio);
+
+	/* Enable EXTI line 3 on GPIOA */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource3);
+
+	/* Configure interrupts for rising edge on EXTI 3 */
+	exti.EXTI_Line 							= EXTI_Line3;
+	exti.EXTI_LineCmd						= ENABLE;
+	exti.EXTI_Mode 							= EXTI_Mode_Interrupt;
+	exti.EXTI_Trigger 						= EXTI_Trigger_Falling;
+	EXTI_Init(&exti);
+
+	/* Configure interrupt vectors and enable interrupt for EXTI 3 */
+	nvic.NVIC_IRQChannel 					= EXTI3_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority 	= 0x07;
+	nvic.NVIC_IRQChannelSubPriority 		= 0x00;
+	nvic.NVIC_IRQChannelCmd 				= ENABLE;
+	NVIC_Init(&nvic);
 }
 
 void initPixelPort()
@@ -282,6 +300,13 @@ void INTERRUPT TIM2_IRQHandler()
 
 void INTERRUPT DMA2_Stream1_IRQHandler()
 {
+
+	if(DMA2->LISR & (DMA_LISR_TEIF1 | DMA_LISR_DMEIF1))
+	{
+		int n = currentScanLine();
+		int z = n + 1;
+	}
+
 	// Clear all interrupt flags
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1 | DMA_LIFCR_CDMEIF1 | DMA_LIFCR_CFEIF1;
 
@@ -302,6 +327,28 @@ void INTERRUPT DMA2_Stream1_IRQHandler()
 
 		// Re-enable slave mode on TIM8 so that on next HSYNC, TIM8 starts
 		TIM8->SMCR = TIM_SlaveMode_Trigger | TIM_TS_ETRF;
+	}
+}
+
+void INTERRUPT EXTI3_IRQHandler()
+{
+	// Clear EXTI 3 (Interrupt in decoder is self-clearing)
+	EXTI_ClearITPendingBit(EXTI_Line3);
+
+	Status1Type s1 = getDecoderStatus1();
+	Status3Type s3 = getDecoderStatus3();
+
+	setInterruptClear(Interrupt1All, Interrupt3All);
+
+	printf("Status change. S1=%d, S3=%d\n", s1, s3);
+
+	if(s3 & FREE_RUN_ACT)
+	{
+		setFastBlankMode(FBModeStatic);
+	}
+	else
+	{
+		setFastBlankMode(FBModeDynamicEdgeEnhanced);
 	}
 }
 

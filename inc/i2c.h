@@ -13,6 +13,7 @@
 #define REG_DEC_AD_ENABLE				0x07
 #define REG_DEC_DEF_VALUE_Y				0x0C
 #define REG_DEC_DEF_VALUE_C				0x0D
+#define REG_DEC_ADC_CONTROL				0x0E
 #define REG_DEC_STATUS1					0x10
 #define REG_DEC_IDENT					0x11
 #define REG_DEC_STATUS2					0x12
@@ -23,6 +24,15 @@
 #define REG_DEC_FB_CONTROL3				0xEF
 #define REG_DEC_FB_CONTROL4				0xF0
 #define REG_DEC_FB_CONTROL5				0xF1
+
+#define REG_DEC_SM_INTERRUPT_CONFIG		0x40
+#define REG_DEC_SM_INT_1_STATUS			0x42
+#define REG_DEC_SM_INT_1_CLEAR			0x43
+#define REG_DEC_SM_INT_1_MASK			0x44
+#define REG_DEC_SM_INT_3_RAW_STATUS		0x49
+#define REG_DEC_SM_INT_3_STATUS			0x4A
+#define REG_DEC_SM_INT_3_CLEAR			0x4B
+#define REG_DEC_SM_INT_3_MASK			0x4C
 
 #define DEC_AFE_MASK					0x0F
 #define DEC_FBMODE_MASK					0x03
