@@ -23,7 +23,7 @@ void sleep(u32 millisecs)
 		;
 }
 
-void IN_CCM SysTick_Handler()
+void INTERRUPT SysTick_Handler()
 {
 	if(++sysTicks >= sysTickBlinkThreshold)
 	{

@@ -32,6 +32,11 @@ typedef enum {
 } VIDSELType;
 
 typedef enum {
+	IN_LOCK								= 0x01,
+	LOST_LOCK							= 0x02,
+	FSC_LOCK							= 0x04,
+	FOLLOW_PW							= 0x08,
+	ADMask								= 0x70,
 	AD_NTSC_MJ 							= 0x00,
 	AD_NTSC_443							= 0x10,
 	AD_PAL_M							= 0x20,
@@ -39,8 +44,29 @@ typedef enum {
 	AD_PAL_BGHID						= 0x40,
 	AD_SECAM							= 0x50,
 	AD_PAL_CMB_N						= 0x60,
-	AD_SECAM_525						= 0x70
-} ADResultType;
+	AD_SECAM_525						= 0x70,
+	COL_KILL							= 0x80
+} Status1Type;
+
+typedef enum {
+	MVCS_DET							= 0x01,
+	MVCS_T3								= 0x02,
+	MV_PS_DET							= 0x04,
+	MV_AGC_DET							= 0x08,
+	LL_NSTD								= 0x10,
+	FSC_NSTD							= 0x20,
+} Status2Type;
+
+typedef enum {
+	INST_HLOCK							= 0x01,
+	GEMD								= 0x02,
+	SD_OP_50HZ							= 0x04,
+	CVBS								= 0x08,
+	FREE_RUN_ACT						= 0x10,
+	STD_FLD_LEN							= 0x20,
+	INTERLACED							= 0x40,
+	PAL_SW_LOCK							= 0x80
+} Status3Type;
 
 typedef enum {
 	AAFiltEn0						 	= 0x01,
@@ -160,6 +186,44 @@ typedef enum {
 	LowPowerDAC3						= 0x04,
 } EncoderLowPowerModeType;
 
+typedef enum {
+	UserSubMapDisabled					= 0x00,
+	UserSubMapEnabled					= 0x20
+} UserSubMapType;
+
+typedef enum {
+	DriveOpenDrain						= 0x00,
+	DriveActiveLow						= 0x01,
+	DriveActiveHigh						= 0x02,
+	ManualInterruptDisabled				= 0x00,
+	ManualInterruptEnabled				= 0x04,
+	MacrovisionPseudoSyncOnly			= 0x10,
+	MacrovisionColourStripeOnly			= 0x20,
+	MacrovisionPseudoSyncAndColour		= 0x30,
+	Duration3Xtal						= 0x00,
+	Duration15Xtal						= 0x40,
+	Duration63Xtal						= 0x80,
+	DurationActiveUntilCleared			= 0xC0
+} InterruptConfigType;
+
+typedef enum {
+	Lock	 							= 0x01,
+	Unlock								= 0x02,
+	FreeRun								= 0x20,
+	MVPseudoSyncColourStripe			= 0x40,
+	Interrupt1All						= 0xFF
+} Interrupt1Type;
+
+typedef enum {
+	SDStandard 							= 0x01,
+	SDVerticalLock						= 0x02,
+	SDHorizontalLock					= 0x04,
+	SDAutodetectResult					= 0x08,
+	SDSECAMLock							= 0x10,
+	SDPALSwingBurstLock					= 0x20,
+	Interrupt3All						= 0xFF
+} Interrupt3Type;
+
 void initLeds();
 void initUserButtons();
 void initVideoChips();
@@ -192,36 +256,62 @@ void setChromaFilter(ChromaFilterType filter);
 void setPrPbSSAFEnabled(PrPbSSAFEnabledType enable);
 void setLowPowerMode(EncoderLowPowerModeType enable);
 
+void setUserSubMap(UserSubMapType usr);
+
+void setInterruptConfig(InterruptConfigType config);
+void setInterruptClear(Interrupt1Type clr1, Interrupt3Type clr3);
+
+Interrupt1Type getInterrupt1ChangeStatus();
+void setInterrupt1Clear(Interrupt1Type clr);
+void setInterrupt1Mask(Interrupt1Type msk);
+Interrupt3Type getInterrupt3RawStatus();
+Interrupt3Type getInterrupt3ChangeStatus();
+void setInterrupt3Clear(Interrupt3Type clr);
+void setInterrupt3Mask(Interrupt3Type msk);
+
+Status1Type getDecoderStatus1();
+Status2Type getDecoderStatus2();
+Status3Type getDecoderStatus3();
+
 void setDecoderCtiEnabled(u8 enable);
 void setDecoderCtiAlphaBlendEnabled(u8 enable);
 void setDecoderDnrEnabled(u8 enable);
 void setDecoderCtiChromaTheshold(u8 threshold);
 void setDecoderDnrNoiseTheshold(u8 threshold);
 
-// The LEDs are effectively active-low because they are connected to VCC and the GPIO is GND. Set to 0 to turn the LEDs on.
 typedef enum {
-	ON 	= 0x00,
-	OFF = 0x01
+	OFF 	= 0x00,
+	ON 		= 0x01
 } LEDStatusType;
 
 ALWAYS_INLINE void setLed1 (LEDStatusType status)
 {
-	OUTPUT_PIN(GPIOF, 9) = status;
+	OUTPUT_PIN(GPIOB, 0) = status;
 }
 
 ALWAYS_INLINE void setLed2(LEDStatusType status)
 {
-	OUTPUT_PIN(GPIOF, 10) = status;
+	OUTPUT_PIN(GPIOB, 7) = status;
+}
+
+ALWAYS_INLINE void setLed3(LEDStatusType status)
+{
+	OUTPUT_PIN(GPIOB, 14) = status;
 }
 
 ALWAYS_INLINE void toggleLed1()
 {
-	OUTPUT_PIN(GPIOF, 9) = !OUTPUT_PIN(GPIOF, 9);
+	OUTPUT_PIN(GPIOB, 0) = !OUTPUT_PIN(GPIOB, 0);
 }
 
 ALWAYS_INLINE void toggleLed2()
 {
-	OUTPUT_PIN(GPIOF, 10) = !OUTPUT_PIN(GPIOF, 10);
+	OUTPUT_PIN(GPIOB, 7) = !OUTPUT_PIN(GPIOB, 7);
+}
+
+ALWAYS_INLINE void toggleLed3()
+{
+	OUTPUT_PIN(GPIOB, 14) = !OUTPUT_PIN(GPIOB, 14);
 }
 
 #endif /* CONTROL_H_ */

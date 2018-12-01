@@ -14,11 +14,12 @@
   PA0			HSYNC input (pixel start)
   PA1			VSYNC input
   PA2			FIELD input
+  PA3			INT input
   PA5			HSYNC input (line count)
 
-  PB6-7			I2C SCL and SDA output
+  PB8-9			I2C SCL and SDA output
 
-  PE3-4			User buttons
+  PC13			User button
 
   PF0-7			Pixel bus output
   PF9-10		LEDs, active low
@@ -36,8 +37,8 @@ void initDebug()
 	DWT->CTRL |= 1 ;	// Enable CPU cycle counter
 }
 
-IN_CCM char szBtn0Msg[20];
-IN_CCM char szBtn1Msg[20];
+char szBtn0Msg[20];
+char szBtn1Msg[20];
 
 int main(void)
 {
@@ -53,12 +54,12 @@ int main(void)
   *  E.g.  SCB->VTOR = 0x20000000;
   */
 
-  printf("WekaOSD 0.01\r\n");
+  printf("WekaOSD 0.01\n");
 
   SystemCoreClockUpdate();
   initDebug();
 
-  printf("Initializing hardware...\r\n");
+  printf("Initializing hardware...\n");
 
   /* Give the chips a chance to fully power up */
   sleep(400);
@@ -70,7 +71,7 @@ int main(void)
   initSystem();
   initVideo();
 
-  setLowPowerMode(LowPowerDAC1);
+  //setLowPowerMode(LowPowerDAC1);
 
   sprintf(szBtn0Msg, "TEST0");
   sprintf(szBtn1Msg, "TEST1");
@@ -82,27 +83,10 @@ int main(void)
 }
 
 
-u8 dnr = 0;
-void INTERRUPT IN_CCM EXTI3_IRQHandler()
-{
-	EXTI_ClearITPendingBit(EXTI_Line3);
-
-	dnr += 1;
-	if(dnr > 15)
-		dnr = 0;
-
-	setDnrEnabled(DNREnabled);
-	setDnrMode(dnr & 0x08);
-	setDnrFilter(dnr & 0x07);
-
-	u8 v = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2);
-	sprintf(szBtn0Msg, "DN2R: %d", v);
-}
-
 u8 chroma = 0;
-void INTERRUPT IN_CCM EXTI4_IRQHandler()
+void INTERRUPT EXTI15_10_IRQHandler()
 {
-	EXTI_ClearITPendingBit(EXTI_Line4);
+	EXTI_ClearITPendingBit(EXTI_Line13);
 
 	chroma += 1;
 	if(chroma > 7)
@@ -113,5 +97,5 @@ void INTERRUPT IN_CCM EXTI4_IRQHandler()
 
 	u8 v = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);
 
-	sprintf(szBtn1Msg, "MOD1: %d", v);
+	sprintf(szBtn0Msg, "MOD1: %d", v);
 }

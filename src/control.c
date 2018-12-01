@@ -7,66 +7,64 @@
 #include "stdio.h"
 #include "misc.h"
 #include "i2c.h"
+#include "system.h"
 #include "bitband.h"
 #include "control.h"
+
+// I2C hangs if a write immediately follows a read. It seems the overhead of a function call is enough of a pause to allow it to work.
+#define READ_WRITE_SLEEP sleep(1);
 
 void initLeds()
 {
 	/* Clock to GPIOF */
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOF, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 
 	/* Initialize PF9, PF10 for LED blinking */
 	GPIO_InitTypeDef		gpio;
 
-	gpio.GPIO_Pin 	= GPIO_Pin_9 | GPIO_Pin_10;
+	gpio.GPIO_Pin 	= GPIO_Pin_0 | GPIO_Pin_7 | GPIO_Pin_14;
 	gpio.GPIO_Mode 	= GPIO_Mode_OUT;
 	gpio.GPIO_Speed = GPIO_Speed_2MHz;
 	gpio.GPIO_OType = GPIO_OType_PP;
 	gpio.GPIO_PuPd 	= GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOF, &gpio);
+	GPIO_Init(GPIOB, &gpio);
 
 	setLed1(OFF);
 	setLed2(OFF);
+	setLed3(OFF);
 }
 
 void initUserButtons()
 {
-	/* Clock to GPIOE */
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
+	/* Clock to GPIOc */
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
 	GPIO_InitTypeDef		gpio;
 	EXTI_InitTypeDef 		exti;
 	NVIC_InitTypeDef 		nvic;
 
-	/* Enable GPIO PE3, PE4 */
-	gpio.GPIO_Pin 							= GPIO_Pin_3 | GPIO_Pin_4;
+	/* Enable GPIO PC13 */
+	gpio.GPIO_Pin 							= GPIO_Pin_13;
 	gpio.GPIO_Mode 							= GPIO_Mode_IN;
 	gpio.GPIO_PuPd 							= GPIO_PuPd_UP;
 	GPIO_Init(GPIOE, &gpio);
 
-	/* GPIOE is source for EXTI line 3 and 4 */
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOE, EXTI_PinSource3);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOE, EXTI_PinSource4);
+	/* GPIOC is source for EXTI line 13 */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource13);
 
-	/* Configure interrupts for falling edge on EXTI 3 and 4 */
-	exti.EXTI_Line 							= EXTI_Line3;
+	/* Configure interrupts for falling edge on EXTI 13 */
+	exti.EXTI_Line 							= EXTI_Line13;
 	exti.EXTI_LineCmd						= ENABLE;
 	exti.EXTI_Mode 							= EXTI_Mode_Interrupt;
 	exti.EXTI_Trigger 						= EXTI_Trigger_Falling;
 	EXTI_Init(&exti);
 
-	exti.EXTI_Line 							= EXTI_Line4;
-	EXTI_Init(&exti);
-
-	/* Configure interrupt vectors and enable interrupt for EXTI 3 and 4 */
-	nvic.NVIC_IRQChannel 					= EXTI3_IRQn;
+	/* Configure interrupt vectors and enable interrupt for EXTI 13 */
+	nvic.NVIC_IRQChannel 					= EXTI15_10_IRQn;
 	nvic.NVIC_IRQChannelPreemptionPriority 	= 0x06;
 	nvic.NVIC_IRQChannelSubPriority 		= 0x00;
 	nvic.NVIC_IRQChannelCmd 				= ENABLE;
-	NVIC_Init(&nvic);
-
-	nvic.NVIC_IRQChannel 					= EXTI4_IRQn;
 	NVIC_Init(&nvic);
 }
 
@@ -133,14 +131,19 @@ void initVideoChips()
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_7, 0x00);	// 8-bit input
 
 	// Adjust the position of HSYNC, so it reflects the timing of the CVBS input rather than the digital output
-	setHSyncTiming(1061, 860);
+	setHSyncTiming(880, 680);
 
 	setFastBlankMode(FBModeDynamic);
+	setFastBlankSource(FBSourceRgb);
 	setFastBlankContrastReductionMode(FBContrastReductionEnabled);
 	setFastBlankContrastReductionLevel(FBContrastReductionLevel75);
 	setFastBlankThresholds(FBLevelThreshold3, FBContrastThreshold3);
 
-	printf("Decoder and encoder configured\r\n");
+	setInterruptConfig(DriveActiveLow | DurationActiveUntilCleared);
+	setInterrupt1Mask(Lock | FreeRun);
+	setInterrupt3Mask(SDAutodetectResult);
+
+	printf("Decoder and encoder configured\n");
 }
 
 void showTestPattern()
@@ -156,6 +159,8 @@ void setVideoInput(INSELType ain)
 {
 	u8 inc  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_INP_CONTRL);
 	inc		= (inc & 0xFC) | (((u8)ain) & 0x03);
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_INP_CONTRL, inc);
 }
@@ -188,6 +193,8 @@ void setVideoStandard(VIDSELType std)
 	u8 inc  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_INP_CONTRL);
 	inc		= (inc & DEC_INPC_VIDSEL_MASK) | (((u8)std) & DEC_INPC_VIDSEL_MASK);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_DEC_INP_CONTRL, inc);
 }
 
@@ -201,6 +208,8 @@ void setFreeRunColour(u16 yPbPr)
 	u8 val  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_DEF_VALUE_Y);
 	val 	= (val & ~DEC_FREERUN_Y_MASK) | (((u8)(yPbPr >> 6)) | DEC_FREERUN_Y_MASK);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_DEF_VALUE_C, (u8)yPbPr);
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_DEF_VALUE_Y, val);
 }
@@ -210,6 +219,8 @@ void forceFreeRunScreen(FreeRunForceActiveType fa)
 	u8 val  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_DEF_VALUE_Y);
 	val		= (val & ~DEF_VAL_EN) | (fa & DEF_VAL_EN);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_DEF_VALUE_Y, val);
 }
 
@@ -217,6 +228,8 @@ void setAntiAliasControl(AFEControlType afe)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_AFE_CONTROL);
 	v = (v & ~DEC_AFE_MASK) | (afe & DEC_AFE_MASK);
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_AFE_CONTROL, v);
 }
@@ -226,6 +239,8 @@ void setFastBlankMode(FBModeType fbm)
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL1);
 	v = (v & ~DEC_FBMODE_MASK) | (fbm & DEC_FBMODE_MASK);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL1, v);
 }
 
@@ -233,6 +248,8 @@ void setFastBlankSource(FBSourceType fbs)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL1);
 	v = (v & ~DEC_FBSOURCE_MASK) | (fbs & DEC_FBSOURCE_MASK);
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL1, v);
 }
@@ -242,6 +259,8 @@ void setFastBlankAlphaCoefficient(u8 fbac)
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL2);
 	v = (v & ~DEC_FBALPHA_MASK) | (fbac & DEC_FBALPHA_MASK);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL2, v);
 }
 
@@ -249,6 +268,8 @@ void setFastBlankContrastReductionMode(FBContrastReductionModeType fbcm)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL3);
 	v = (v & ~DEC_FBCONTRAST_MASK) | (fbcm & DEC_FBCONTRAST_MASK);
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL3, v);
 }
@@ -258,6 +279,8 @@ void setFastBlankEdgeShapeLevel(FBEdgeShapeLevelType fbesl)
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL3);
 	v = (v & ~DEC_FBEDGESHAPE_MASK) | (fbesl & DEC_FBEDGESHAPE_MASK);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL3, v);
 }
 
@@ -266,6 +289,8 @@ void setFastBlankContrastReductionLevel(FBContrastReductionLevelType fbcl)
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL5);
 	v = (v & ~DEC_FBCONTRASTLEVEL_MASK) | (fbcl & DEC_FBCONTRASTLEVEL_MASK);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL5, v);
 }
 
@@ -273,6 +298,8 @@ void setFastBlankThresholds(FBLevelThresholdType fbl, FBContrastThresholdType fb
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL5);
 	v = (v & ~(DEC_FBLEVELTHRESHOLD_MASK | DEC_FBCONTRASTTHRESHOLD_MASK)) | (fbl & DEC_FBLEVELTHRESHOLD_MASK) | (fbc & DEC_FBCONTRASTTHRESHOLD_MASK);
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_FB_CONTROL5, v);
 }
@@ -292,6 +319,8 @@ void setLowPowerMode(EncoderLowPowerModeType lowPowerEnable)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DAC_LOW_POWER);
 	v = (v & ~(LowPowerDAC1 | LowPowerDAC2 | LowPowerDAC3)) | lowPowerEnable;
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DAC_LOW_POWER, v);
 }
@@ -323,6 +352,8 @@ void setDnrMode(DNRModeType mode)
 	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2);
 	v = (v & 0xF7) | mode;
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2, v);
 }
 
@@ -330,6 +361,8 @@ void setDnrFilter(DNRFilterType filter)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2);
 	v = (v & 0xF8) | filter;
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2, v);
 }
@@ -339,6 +372,8 @@ void setDnrBlockOffset(u8 offset)
 	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2);
 	v = (v & 0x0F) | (offset << 4);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_DNR_2, v);
 }
 
@@ -346,6 +381,8 @@ void setLumaFilter(LumaFilterType filter)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);
 	v = (v & 0xE3) | filter;
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1, v);
 }
@@ -355,6 +392,8 @@ void setChromaFilter(ChromaFilterType filter)
 	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);
 	v = (v & 0x1F) | filter;
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1, v);
 }
 
@@ -362,6 +401,8 @@ void setPrPbSSAFEnabled(PrPbSSAFEnabledType enable)
 {
 	u8 v  = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_2);
 	v = (v & ~PrPbSSAFEnabled) | enable;
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_2, v);
 }
@@ -372,6 +413,8 @@ void setDecoderCtiEnabled(u8 enable)
 	v		&= ~(0x01);
 	v		|= (enable & 0x01);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1, v);
 }
 
@@ -381,6 +424,8 @@ void setDecoderCtiAlphaBlendEnabled(u8 enable)
 	v 		&= ~(0x01 << 1);
 	v		|= ((enable & 0x01) << 1);
 
+	READ_WRITE_SLEEP
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1, v);
 }
 
@@ -389,6 +434,8 @@ void setDecoderDnrEnabled(u8 enable)
 	u8 v  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1);
 	v 		&= ~(0x01 << 5);
 	v		|= ((enable & 0x01) << 5);
+
+	READ_WRITE_SLEEP
 
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_1, v);
 }
@@ -401,5 +448,98 @@ void settDecoderCtiChromaTheshold(u8 threshold)
 void settDecoderDnrNoiseTheshold(u8 threshold)
 {
 	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_CTI_DNR_4, threshold);
+}
+
+Status1Type getDecoderStatus1()
+{
+	return I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_STATUS1);
+}
+
+Status2Type getDecoderStatus2()
+{
+	return I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_STATUS2);
+}
+
+Status3Type getDecoderStatus3()
+{
+	return I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_STATUS3);
+}
+
+void setUserSubMap(UserSubMapType usr)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, usr);
+}
+
+void setInterruptConfig(InterruptConfigType config)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INTERRUPT_CONFIG, config);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+void setInterruptClear(Interrupt1Type clr1, Interrupt3Type clr3)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_1_CLEAR, clr1);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_CLEAR, clr3);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+Interrupt1Type getInterrupt1ChangeStatus()
+{
+	Interrupt1Type ret;
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	ret = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_1_STATUS);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+
+	return ret;
+}
+
+void setInterrupt1Clear(Interrupt1Type clr)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_1_CLEAR, clr);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+void setInterrupt1Mask(Interrupt1Type msk)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_1_MASK, msk);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+Interrupt3Type getInterrupt3RawStatus()
+{
+	Interrupt3Type ret;
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	ret = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_RAW_STATUS);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+
+	return ret;
+}
+
+Interrupt3Type getInterrupt3ChangeStatus()
+{
+	Interrupt3Type ret;
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	ret = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_STATUS);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+
+	return ret;
+}
+
+void setInterrupt3Clear(Interrupt3Type clr)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_CLEAR, clr);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
+}
+
+void setInterrupt3Mask(Interrupt3Type msk)
+{
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapEnabled);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_SM_INT_3_MASK, msk);
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_ADC_CONTROL, UserSubMapDisabled);
 }
 

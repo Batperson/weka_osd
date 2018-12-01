@@ -40,10 +40,12 @@ void renderArtificialHorizon(PRENDERER r)
 	POINT ctr = { r->rect.left + hw, r->rect.top + hh };
 	rotatePts((PPOINT)lines, sizeof(lines) / sizeof(POINT), &ctr, model.att.roll);
 	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), 0, model.att.pitch);
-	drawLines(lines, sizeof(lines) / sizeof(LINE), r->colour, NULL);
 
 	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), -1, -1);
 	drawLines(lines, sizeof(lines) / sizeof(LINE), BLACK, NULL);
+
+	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), +1, +1);
+	drawLines(lines, sizeof(lines) / sizeof(LINE), r->colour, NULL);
 }
 
 #define LINE_RENDER_BATCH 6
@@ -158,37 +160,37 @@ void renderTape(PRENDERER r)
 	drawText(&rc, pt->font, pt->hdr.colour, align, sz);
 }
 
-void INTERRUPT IN_CCM PendSV_Handler()
+void INTERRUPT PendSV_Handler()
 {
 	// Reset cycle counter
 	DWT->CYCCNT = 0;
 
 	clearRenderBuf();
 
-	COLOUR clr = RGB(0,3,0);
+	COLOUR clr = RGB(3,3,3);
 
-	RECT rc = { 30, 10, 120, 20 };
+	RECT rc = { 1, 20, 100, 20 };
 	drawTestPattern(&rc);
 
-	RECT rc2 = { 200, 170, 60, 20 };
+	RECT rc2 = { 300, 240, 60, 20 };
 	if(blinkOn())
 	{
 		drawText(&rc2, &systemFont, RED, AlignLeft, "ARMED");
 	}
 
-	rc2.top = 100;
+	rc2.top = 160;
 	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn0Msg);
 
-	rc2.top = 120;
+	rc2.top = 180;
 	drawRect(&rc2, BLACK, BLACK);
 	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn1Msg);
 
-	TAPE tp = { { RF_ALIGN_RIGHT, { 268, 0, 20, 200 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
-	TAPE tp2 = { { RF_NONE,       { 1,   0, 20, 200 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 4, 2, &systemFont };
+	TAPE tp = { { RF_ALIGN_RIGHT, { 338, 0, 20, 288 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
+	TAPE tp2 = { { RF_NONE,       { 1,   0, 20, 288 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 4, 2, &systemFont };
 	renderTape(&tp.hdr);
 	renderTape(&tp2.hdr);
 
-	RENDERER ahi = { 0, { 0, 0, 300, 200 }, clr, NULL };
+	RENDERER ahi = { 0, { 0, 0, 360, 288 }, clr, NULL };
 	renderArtificialHorizon(&ahi);
 
 	// Output cycle count for profiling
