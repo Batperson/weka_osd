@@ -41,11 +41,8 @@ void renderArtificialHorizon(PRENDERER r)
 	rotatePts((PPOINT)lines, sizeof(lines) / sizeof(POINT), &ctr, model.att.roll);
 	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), 0, model.att.pitch);
 
-	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), -1, -1);
-	drawLines(lines, sizeof(lines) / sizeof(LINE), BLACK, NULL);
-
 	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), +1, +1);
-	drawLines(lines, sizeof(lines) / sizeof(LINE), r->colour, NULL);
+	drawLines(lines, sizeof(lines) / sizeof(LINE), None, NULL);
 }
 
 #define LINE_RENDER_BATCH 6
@@ -57,8 +54,10 @@ void renderTape(PRENDERER r)
 
 	char sz[6];
 	LINE lines[LINE_RENDER_BATCH];
-	AlignmentType align;
+	DrawFlags df;
 	RECT rc;
+
+	COLOUR ofc		= selectForeColour(pt->hdr.colour);
 
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
 	DU offset	  	= nearbyintf(fmodf(value, pt->unitsPerDivision) * pt->pixelsPerDivision);
@@ -78,8 +77,6 @@ void renderTape(PRENDERER r)
 		x3 = x1 - pt->majorDivisionWidth;
 
 		rc.left = pt->hdr.rect.left;
-
-		align = AlignRight;
 	}
 	else
 	{
@@ -88,8 +85,6 @@ void renderTape(PRENDERER r)
 		x3 = x1 + pt->majorDivisionWidth;
 
 		rc.left = x3 + 2;
-
-		align = AlignLeft;
 	}
 
 	int currentUnit = ((value / pt->unitsPerDivision) * pt->unitsPerDivision) + (divsAbove * pt->unitsPerDivision);
@@ -108,7 +103,10 @@ void renderTape(PRENDERER r)
 			{
 				lines[i].p2.x = x3;
 
-				align			= (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignRight : AlignLeft;
+				df				= (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignRight : AlignLeft;
+				if(pt->hdr.flags & RF_OUTLINE)
+					df |= Outline;
+
 				rc.top			= startPoint - (pt->font->charheight >> 1);
 				rc.height		= pt->font->charheight;
 
@@ -117,7 +115,7 @@ void renderTape(PRENDERER r)
 				{
 					rc.top 		-= disc;
 					rc.height 	+= disc;
-					align		|= AlignBottom;
+					df			|= AlignBottom;
 				}
 				else if((disc = (rc.top + rc.height) - (pt->hdr.rect.top + pt->hdr.rect.height)) > 0)
 				{
@@ -126,17 +124,14 @@ void renderTape(PRENDERER r)
 
 				sprintf(sz, "%d", currentUnit);
 
-				drawText(&rc, pt->font, pt->hdr.colour, align, sz);
+				drawText(&rc, pt->font, df, sz);
 			}
 
 			currentUnit		-= pt->unitsPerDivision;
 			startPoint		+= pt->pixelsPerDivision;
 		}
 
-		drawLines(lines, lcnt, pt->hdr.colour, &pt->hdr.rect);
-
-		offsetPts((PPOINT)lines, lcnt * 2, 0, -1);
-		drawLines(lines, lcnt, SEMITRANSPARENT, &pt->hdr.rect);
+		drawLines(lines, lcnt, None, &pt->hdr.rect);
 
 		divs.quot -= lcnt;
 	}
@@ -149,7 +144,7 @@ void renderTape(PRENDERER r)
 	rc.width				= arrowWidth;
 	rc.height				= arrowHeight;
 
-	drawArrow(&rc, pt->hdr.colour, BLACK, (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );
+	drawArrow(&rc, (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );
 
 	rc.top += 2;
 	rc.left += (pt->hdr.flags & RF_ALIGN_RIGHT) ? 1 : arrowHeight >> 1;
@@ -157,7 +152,9 @@ void renderTape(PRENDERER r)
 
 	sprintf(sz, "%d", (int)truncf(value));
 
-	drawText(&rc, pt->font, pt->hdr.colour, align, sz);
+	drawText(&rc, pt->font, df, sz);
+
+	selectForeColour(ofc);
 }
 
 void INTERRUPT PendSV_Handler()
@@ -167,7 +164,9 @@ void INTERRUPT PendSV_Handler()
 
 	clearRenderBuf();
 
-	COLOUR clr = RGB(3,3,3);
+	COLOUR clr = RGB(0,3,0);
+	selectForeColour(RGB(3,3,3));
+	selectBackColour(RGB(0,0,0));
 
 	RECT rc = { 1, 20, 100, 20 };
 	drawTestPattern(&rc);
@@ -175,18 +174,19 @@ void INTERRUPT PendSV_Handler()
 	RECT rc2 = { 300, 240, 60, 20 };
 	if(blinkOn())
 	{
-		drawText(&rc2, &systemFont, RED, AlignLeft, "ARMED");
+		selectForeColour(RGB(3,3,0));
+		drawText(&rc2, &systemFont, AlignLeft | Inverse, "ARMED");
+		selectForeColour(RGB(3,3,3));
 	}
 
 	rc2.top = 160;
-	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn0Msg);
+	drawText(&rc2, &systemFont, AlignLeft | Inverse, szBtn0Msg);
 
 	rc2.top = 180;
-	drawRect(&rc2, BLACK, BLACK);
-	drawText(&rc2, &systemFont, clr, AlignLeft, szBtn1Msg);
+	drawText(&rc2, &systemFont, AlignLeft, szBtn1Msg);
 
-	TAPE tp = { { RF_ALIGN_RIGHT, { 338, 0, 20, 288 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
-	TAPE tp2 = { { RF_NONE,       { 1,   0, 20, 288 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 4, 2, &systemFont };
+	TAPE tp = { { RF_ALIGN_RIGHT | RF_OUTLINE, { 338, 0, 20, 288 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
+	TAPE tp2 = { { RF_NONE | RF_OUTLINE,       { 1,   0, 20, 288 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 4, 2, &systemFont };
 	renderTape(&tp.hdr);
 	renderTape(&tp2.hdr);
 

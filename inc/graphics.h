@@ -63,7 +63,7 @@ typedef struct
 {
 	u8 	charwidth;
 	u8 	charheight;
-	u8 	bytesPerChar;
+	u8 	bytesPerLine;
 	u8  asciiOffset;
 	u8* data;
 } FONT, *PFONT;
@@ -79,11 +79,16 @@ typedef enum
 
 typedef enum
 {
+	None		= 0x00,
 	AlignLeft	= 0x00,
 	AlignTop	= 0x00,
 	AlignRight	= 0x01,
-	AlignBottom	= 0x02
-} AlignmentType;
+	AlignBottom	= 0x02,
+
+	Fill		= 0x20,
+	Inverse		= 0x40,
+	Outline		= 0x80,
+} DrawFlags;
 
 typedef struct
 {
@@ -101,11 +106,13 @@ void rotatePts(PPOINT ppt, u16 cnt, PPOINT ctr, float angle);
 void clearRenderBuf();
 
 void drawTestPattern(PRECT rect);
-void drawRect(PRECT rect, COLOUR foreground, COLOUR background);
-void drawLine(PLINE line, COLOUR foreground, PRECT clip);
-void drawLines(PLINE line, u16 cnt, COLOUR foreground, PRECT clip);
-void drawArrow(PRECT rect, COLOUR foreground, COLOUR background, AlignmentType alignment);
-void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment, char* text);
+void drawRect(PRECT rect, DrawFlags flags);
+void drawLine(PLINE line, DrawFlags flags, PRECT clip);
+void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip);
+void drawArrow(PRECT rect, DrawFlags alignment);
+void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text);
 
+COLOUR selectForeColour(COLOUR foreground);
+COLOUR selectBackColour(COLOUR background);
 
 #endif /* GRAPHICS_H_ */

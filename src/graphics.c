@@ -20,6 +20,25 @@ ALWAYS_INLINE void setPixel(DU x, DU y, COLOUR colour) { *ptToOffset(x,y) = colo
 static COLOUR testPattern[]= { RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, MAGENTA, VIOLET, WHITE, GRAY, DKGRAY };
 static RECT rcBuf = { 0, 0, FRAME_BUF_WIDTH, FRAME_BUF_HEIGHT };
 
+static COLOUR foreground = RGB(3,3,3);
+static COLOUR background = RGB(0,0,0);
+
+COLOUR selectForeColour(COLOUR fg)
+{
+	COLOUR retval = foreground;
+	foreground = fg;
+
+	return retval;
+}
+
+COLOUR selectBackColour(COLOUR bg)
+{
+	COLOUR retval = background;
+	background = bg;
+
+	return retval;
+}
+
 void clearRenderBuf()
 {
 	//zerobuf(currentRenderBuf, FRAME_BUF_SIZE);
@@ -67,7 +86,7 @@ void drawTestPattern(PRECT rect)
 			mset(ptToOffset(rect->left + (j * bandWidth), i), testPattern[j], bandWidth);
 }
 
-void drawRect(PRECT rect, COLOUR foreground, COLOUR background)
+void drawRect(PRECT rect, DrawFlags flags)
 {
 	DU bottom = rect->top + rect->height - 1;
 	mset(ptToOffset(rect->left, rect->top), foreground, rect->width);
@@ -82,7 +101,7 @@ void drawRect(PRECT rect, COLOUR foreground, COLOUR background)
 	mset(ptToOffset(rect->left, bottom), foreground, rect->width);
 }
 
-void drawArrow(PRECT rect, COLOUR foreground, COLOUR background, AlignmentType alignment)
+void drawArrow(PRECT rect, DrawFlags alignment)
 {
 	DU bt	= rect->top + rect->height - 1;
 	DU ao	= rect->height >> 1;
@@ -105,12 +124,12 @@ void drawArrow(PRECT rect, COLOUR foreground, COLOUR background, AlignmentType a
 	}
 }
 
-void drawLine(PLINE line, COLOUR foreground, PRECT clip)
+void drawLine(PLINE line, DrawFlags flags, PRECT clip)
 {
 	drawLines(line, 1, foreground, clip);
 }
 
-void drawLines(PLINE line, u16 cnt, COLOUR foreground, PRECT clip)
+void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip)
 {
 	while(cnt--)
 	{
@@ -219,13 +238,13 @@ void drawLines(PLINE line, u16 cnt, COLOUR foreground, PRECT clip)
 	}
 }
 
-void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment, char* text)
+void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
 {
 	DU x, y;
 	char* sz;
 	int sx, sy;
 
-	if(alignment & AlignRight)
+	if(flags & AlignRight)
 	{
 		int l = strlen(text);
 		DU w  = l * font->charwidth;
@@ -252,7 +271,7 @@ void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment
 		y = rect->top;
 	}
 
-	if(alignment & AlignBottom)
+	if(flags & AlignBottom)
 	{
 		DU d;
 		y = (rect->top + rect->height) - font->charheight;
@@ -264,7 +283,10 @@ void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment
 		sy = 0;
 	}
 
-	register u32 brush = foreground | (foreground << 8) | (foreground << 16) | (foreground << 24);
+	COLOUR fg 	= (flags & Inverse) ? background : foreground;
+	COLOUR bg 	= (flags & Inverse) ? foreground : background;
+	u32 bbrsh 	= bg | bg << 8 | bg << 16 | bg << 24;
+	u32 defmask	= (flags & Inverse) ? 0xffffffff : 0x00;
 
 	while(*sz)
 	{
@@ -272,37 +294,62 @@ void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment
 		{
 			PPIXEL dest = ptToOffset(x, y + i);
 
-			register u32 mask	= 0x00;
-			register u8* src	= font->data + ((*sz-font->asciiOffset) * font->charheight) + (i * font->bytesPerChar);
-			register u32* dw	= (u32*)((u32)dest & ~0x3);
-			register u8 dwp		= ((u32)dest & 0x3);
-			register u8 sbp		= 0;
+			// Note will have issues if we have a font with chars more than 8 wide and we start at sx >= 8
+
+			register u8* src	= font->data + ((*sz-font->asciiOffset) * font->charheight) + (i * font->bytesPerLine);
+			register u32* dw	= (u32*)((u32)dest & ~0x3);	// Destination word, the frame buffer word we are blitting to
+			register u8 dwp		= ((u32)dest & 0x3);		// Destination work position, the byte index within dw for the current byte we are setting
+			register u32 v		= 0x80 >> sx;				// The bit in src that we expect to see set if there is an active pixel
+			register u32 data	= bbrsh;					// The buffer that will be combined with [dest] using [mask]
+			register u32 mask	= defmask << (dwp * 8);
 
 			for(int j=sx; j<font->charwidth; j++)
 			{
 				if((x + j) >= (rect->left + rect->width))
 					break;
 
-				// Must take account of little-endian word arrangement, i.e. left-most pixel goes at right-most byte
-				int v = (*src >> (7 - sbp)) & 0x01;
-				if(v == 1)
-					mask |= (0xff << (dwp * 8));
+				register u8 masked 		= 0;			// if 1, then we will plot a pixel
+				register u32 shift 		= (dwp * 8);	// How much to left-shift to reach the current pixel position in the current word
+
+				// Note: [shift] must take account of little-endian word arrangement, i.e. left-most pixel goes at right-most byte, so it is a left shift not a right.
+				if(flags & Outline)
+				{
+					if(j > 0 && (*src & v << 1))
+						masked = 1;
+					else if(j < font->charwidth-1 && (*src & v >> 1))
+						masked = 1;
+					else if(i > 0 && (*(src - font->bytesPerLine) & v))
+						masked = 1;
+					else if(i < font->charheight-1 && (*(src + font->bytesPerLine) & v))
+						masked = 1;
+				}
+
+				if(*src & v)
+				{
+					masked = 1;
+					data &= ~(0xff << shift);
+					data |= (fg << shift);
+				}
+
+				if(masked == 1)
+					mask |= (0xff << shift);
 
 				if(++dwp >= 4)
 				{
 					if(mask == 0xffffffff)
-						*dw = brush;
+						*dw = data;
 					else if(mask > 0)
-						*dw = ((*dw & ~mask) | (brush & mask));
+						*dw = ((*dw & ~mask) | (data & mask));
 
-					dwp = 0;
-					mask = 0;
+					dwp 	= 0;
+					mask 	= defmask;
+					data	= bbrsh;
 					dw++;
 				}
 
-				if(++sbp >= 8)
+				if(!(v >>= 1))
 				{
-					sbp = 0;
+					v = 0x80;
 					src++;
 				}
 			}
@@ -310,9 +357,9 @@ void drawText(PRECT rect, PFONT font, COLOUR foreground, AlignmentType alignment
 			if(dwp > 0)
 			{
 				if(mask == 0xffffffff)
-					*dw = brush;
+					*dw = data;
 				else if(mask > 0)
-					*dw = ((*dw & ~mask) | (brush & mask));
+					*dw = ((*dw & ~mask) | (data & mask));
 			}
 
 			if((y + i) >= (rect->top + rect->height))
