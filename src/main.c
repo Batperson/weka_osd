@@ -54,12 +54,12 @@ int main(void)
   *  E.g.  SCB->VTOR = 0x20000000;
   */
 
-  printf("WekaOSD 0.01\r\n");
+  printf("WekaOSD 0.01\n");
 
   SystemCoreClockUpdate();
   initDebug();
 
-  printf("Initializing hardware...\r\n");
+  printf("Initializing hardware...\n");
 
   /* Give the chips a chance to fully power up */
   sleep(400);

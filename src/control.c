@@ -143,7 +143,7 @@ void initVideoChips()
 	setInterrupt1Mask(Lock | FreeRun);
 	setInterrupt3Mask(SDAutodetectResult);
 
-	printf("Decoder and encoder configured\r\n");
+	printf("Decoder and encoder configured\n");
 }
 
 void showTestPattern()
