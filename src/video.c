@@ -370,5 +370,5 @@ void initVideo()
 	initPixelDma();
 	initPendSV();
 
-	printf("Video configured\r\n");
+	printf("Video configured\n");
 }
