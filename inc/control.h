@@ -126,6 +126,11 @@ typedef enum {
 } FreeRunForceActiveType;
 
 typedef enum {
+	FreeRunDisabled						= 0x00,
+	FreeRunEnabled						= 0x02
+} FreeRunEnabledType;
+
+typedef enum {
 	DNRDisabled							= 0x00,
 	DNREnabled							= 0x20
 } DNREnabledType;
@@ -232,9 +237,9 @@ void setVideoInput(INSELType ain);
 void setTimingFromPins();
 void setYPrPbComponentOutput();
 void setVideoStandard(VIDSELType std);
-void setOutputMode(u8 output);
-void setFreeRunColour(u16 yPbPr);
 void forceFreeRunScreen(FreeRunForceActiveType fa);
+void setFreeRunEnabled(FreeRunEnabledType fa);
+void setFreeRunColour(u16 yPbPr);
 void setAntiAliasControl(AFEControlType afe);
 void setFastBlankMode(FBModeType fbm);
 void setFastBlankSource(FBSourceType fbs);
