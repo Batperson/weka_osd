@@ -25,6 +25,8 @@ extern char szBtn1Msg[];
 
 void renderArtificialHorizon(PRENDERER r)
 {
+	COLOUR ofc		= selectForeColour(r->colour);
+
 	DU hw = r->rect.width / 2;
 	DU hh = r->rect.height / 2;
 
@@ -43,6 +45,8 @@ void renderArtificialHorizon(PRENDERER r)
 
 	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), +1, +1);
 	drawLines(lines, sizeof(lines) / sizeof(LINE), None, NULL);
+
+	selectForeColour(ofc);
 }
 
 #define LINE_RENDER_BATCH 6
@@ -164,9 +168,8 @@ void INTERRUPT PendSV_Handler()
 
 	clearRenderBuf();
 
-	COLOUR clr = RGB(0,3,0);
-	selectForeColour(RGB(3,3,3));
-	selectBackColour(RGB(0,0,0));
+	COLOUR clr =  RGB(2,3,2);
+
 
 	RECT rc = { 1, 20, 100, 20 };
 	drawTestPattern(&rc);

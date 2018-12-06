@@ -198,9 +198,14 @@ void setVideoStandard(VIDSELType std)
 	I2C_WriteByte(I2C1, ADDR_ENCODER, REG_DEC_INP_CONTRL, inc);
 }
 
-void setOutputMode(u8 output)
+void setFreeRunEnabled(FreeRunEnabledType fa)
 {
+	u8 val  = I2C_ReadByte(I2C1, ADDR_DECODER, REG_DEC_DEF_VALUE_Y);
+	val		= (val & ~DEF_VAL_AUTO_EN) | (fa & DEF_VAL_AUTO_EN);
 
+	READ_WRITE_SLEEP
+
+	I2C_WriteByte(I2C1, ADDR_DECODER, REG_DEC_DEF_VALUE_Y, val);
 }
 
 void setFreeRunColour(u16 yPbPr)
