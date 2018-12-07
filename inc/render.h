@@ -12,9 +12,12 @@
 
 typedef enum {
 	RF_NONE								= 0x00,
+	RF_ALIGN_LEFT						= 0x00,
+	RF_ALIGN_TOP						= 0x00,
 	RF_HIDDEN							= 0x01,
 	RF_BLINK							= 0x02,
 	RF_ALIGN_RIGHT						= 0x04,
+	RF_ALIGN_BOTTOM						= 0x08,
 	RF_OUTLINE							= 0x80
 } RenderFlagsType;
 
