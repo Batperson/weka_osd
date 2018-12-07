@@ -88,17 +88,59 @@ void drawTestPattern(PRECT rect)
 
 void drawRect(PRECT rect, DrawFlags flags)
 {
-	DU bottom = rect->top + rect->height - 1;
-	mset(ptToOffset(rect->left, rect->top), foreground, rect->width);
+	DU top 		= rect->top;
+	DU bottom	= rect->top + rect->height - 1;
+	COLOUR fore	= (flags & Inverse) ? background : foreground;
+	COLOUR back	= (flags & Inverse) ? foreground : background;
 
-	for(DU i=rect->top + 1; i<bottom; i++)
+	if(flags & Outline)
 	{
-		setPixel(rect->left, i, foreground);
-		mset(ptToOffset(rect->left + 1, i), background, rect->width - 1);
-		setPixel(rect->left + rect->width-1, i, foreground);
+		mset(ptToOffset(rect->left, rect->top), fore, rect->width);
+		mset(ptToOffset(rect->left, bottom), fore, rect->width);
+		top++;
+		bottom--;
 	}
 
-	mset(ptToOffset(rect->left, bottom), foreground, rect->width);
+	for(DU i = top; i<=bottom; i++)
+	{
+		if(flags & Fill)
+			mset(ptToOffset(rect->left, i), back, rect->width);
+
+		if(flags & Outline)
+		{
+			setPixel(rect->left, i, fore);
+			setPixel(rect->left + rect->width-1, i, fore);
+		}
+	}
+
+
+}
+
+void drawVertArrow(PRECT rect, DrawFlags alignment)
+{
+	DU halfWidth 	= rect->width >> 1;
+	DU x 			= rect->left + halfWidth;
+	DU xi			= 0;
+	DU ys, ye, yi;
+
+	if(alignment & AlignTop)
+	{
+		ys	= rect->top + rect->height-1;
+		ye	= rect->top;
+		yi 	= -1;
+	}
+	else
+	{
+		ys	= rect->top;
+		ye	= rect->top + rect->height-1;
+		yi 	= 1;
+	}
+
+	for(DU i=ys; i != ye; i += yi)
+	{
+		mset(ptToOffset(x - xi, i), foreground, (xi * 2) + 1);
+		xi++;
+	}
 }
 
 void drawArrow(PRECT rect, DrawFlags alignment)

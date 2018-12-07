@@ -300,13 +300,6 @@ void INTERRUPT TIM2_IRQHandler()
 
 void INTERRUPT DMA2_Stream1_IRQHandler()
 {
-
-	if(DMA2->LISR & (DMA_LISR_TEIF1 | DMA_LISR_DMEIF1))
-	{
-		int n = currentScanLine();
-		int z = n + 1;
-	}
-
 	// Clear all interrupt flags
 	DMA2->LIFCR = DMA_LIFCR_CTCIF1 | DMA_LIFCR_CHTIF1 | DMA_LIFCR_CTEIF1 | DMA_LIFCR_CDMEIF1 | DMA_LIFCR_CFEIF1;
 
