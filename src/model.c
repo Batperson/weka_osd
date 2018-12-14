@@ -8,8 +8,14 @@
 #include "misc.h"
 #include "model.h"
 #include "math.h"
+#include "memory.h"
 
 MODEL model;
+
+void initModel()
+{
+	mset(&model, 0, sizeof(MODEL));
+}
 
 void demoModelUpdate()
 {
@@ -19,7 +25,7 @@ void demoModelUpdate()
 	float val1 = inc;
 	float val2 = inc / 20;
 
-	model.att.heading		= ((cosf(val1) * -60)/4) + 70;
+	model.att.heading		= ((cosf(val1) * -60)/4) + 90;
 	model.att.roll 			= (sinf(val1) * 60);
 	model.loc.altitude 		= (sinf(val2) * 40) + 50;
 	model.vel.vertical		= (cosf(val2) * 10);

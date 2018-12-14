@@ -12,6 +12,7 @@ typedef struct
 	float pitch;
 	float roll;
 	float heading;
+	float homeVector;
 } ATTITUDE;
 
 typedef struct
@@ -47,6 +48,7 @@ extern MODEL model;
 #define DEREFERENCE_OFFSET_FLOAT(ofs) *((float*)(((void*)&model)+ofs))
 #define DEREFERENCE_OFFSET_INT(ofs) *((int*)(((void*)&model)+ofs))
 
+void initModel();
 void demoModelUpdate();
 
 #endif /* MODEL_H_ */

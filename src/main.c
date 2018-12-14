@@ -6,6 +6,7 @@
 #include "control.h"
 #include "system.h"
 #include "graphics.h"
+#include "model.h"
 #include "video.h"
 
 /*
@@ -64,6 +65,7 @@ int main(void)
   /* Give the chips a chance to fully power up */
   sleep(400);
 
+  initModel();
   initLeds();
   initUserButtons();
   initI2C1();
@@ -88,14 +90,7 @@ void INTERRUPT EXTI15_10_IRQHandler()
 {
 	EXTI_ClearITPendingBit(EXTI_Line13);
 
-	chroma += 1;
-	if(chroma > 7)
-		chroma = 0;
+	model.att.heading += 1;
 
-	setPrPbSSAFEnabled(PrPbSSAFDisabled);
-	setChromaFilter(chroma << 5);
-
-	u8 v = I2C_ReadByte(I2C1, ADDR_ENCODER, REG_ENC_SD_MODE_1);
-
-	sprintf(szBtn0Msg, "MOD1: %d", v);
+	sprintf(szBtn0Msg, "HDG: %f", model.att.heading);
 }

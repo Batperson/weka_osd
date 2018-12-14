@@ -62,8 +62,12 @@ void renderHeadingTape(PRENDERER r)
 	COLOUR ofc		= selectForeColour(pt->hdr.colour);
 
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
+
+	int vquot;
+	float vrem		= remquo(value, pt->unitsPerDivision, &vquot);
+
 	div_t divs		= div(pt->hdr.rect.width, pt->pixelsPerDivision);
-	DU offset	  	= nearbyintf(fmodf(value, pt->unitsPerDivision) * pt->pixelsPerDivision);
+	DU offset	  	= nearbyintf((vrem / pt->unitsPerDivision) * pt->pixelsPerDivision);
 	DU midPoint 	= pt->hdr.rect.left + (pt->hdr.rect.width >> 1);
 
 	int divsLeft	= divs.quot >> 1;
@@ -90,7 +94,7 @@ void renderHeadingTape(PRENDERER r)
 	}
 
 	int majorUnit	= pt->unitsPerDivision * pt->majorDivisionIntervals;
-	int currentUnit = ((value / pt->unitsPerDivision) * pt->unitsPerDivision) - (divsLeft * pt->unitsPerDivision);
+	int currentUnit = (vquot * pt->unitsPerDivision) - (divsLeft * pt->unitsPerDivision);
 	if(currentUnit < 0)
 		currentUnit += 360;
 
@@ -171,17 +175,18 @@ void renderHeadingTape(PRENDERER r)
 
 	drawVertArrow(&rc, (pt->hdr.flags & RF_ALIGN_BOTTOM) ? AlignBottom : AlignTop);
 
-	rc.left		= midPoint - (((pt->font->charwidth) * 3) >> 1) - 1;
+	rc.left		= midPoint - (((pt->font->charwidth) * 3) >> 1);
 	rc.top		+= (pt->hdr.flags & RF_ALIGN_BOTTOM) ? cx : -cx;
-	rc.width	= (pt->font->charwidth * 3) + 4;
+	rc.width	= (pt->font->charwidth * 3) + 2;
 	rc.height	= pt->font->charheight + 4;
 
 	drawRect(&rc, Fill | Outline);
-	//rc.left = midPoint - ((strlen(sz) * pt->font->charwidth) >> 1);
-	rc.left = midPoint - ((3 * pt->font->charwidth) >> 1) + 2;
-	rc.top += 2;
 
 	sprintf(sz, "%d", (int)truncf(value));
+
+	rc.left = midPoint - (((strlen(sz) * pt->font->charwidth) >> 1)-1);
+	rc.top += 2;
+
 	drawText(&rc, pt->font, None, sz);
 
 	selectForeColour(ofc);
@@ -199,10 +204,14 @@ void renderTape(PRENDERER r)
 	COLOUR ofc		= selectForeColour(pt->hdr.colour);
 
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
-	DU offset	  	= nearbyintf(fmodf(value, pt->unitsPerDivision) * pt->pixelsPerDivision);
 
-	DU midPoint 	= pt->hdr.rect.height >> 1;
+	int vquot;
+	float vrem		= remquo(value, pt->unitsPerDivision, &vquot);
+
 	div_t divs		= div(pt->hdr.rect.height, pt->pixelsPerDivision);
+	DU offset	  	= nearbyintf((vrem / pt->unitsPerDivision) * pt->pixelsPerDivision);
+	DU midPoint 	= pt->hdr.rect.height >> 1;
+
 	int divsAbove	= divs.quot >> 1;
 	DU startPoint	= pt->hdr.rect.top + (midPoint - (divsAbove * pt->pixelsPerDivision)) + offset;
 
@@ -226,7 +235,7 @@ void renderTape(PRENDERER r)
 		rc.left = x3 + 2;
 	}
 
-	int currentUnit = ((value / pt->unitsPerDivision) * pt->unitsPerDivision) + (divsAbove * pt->unitsPerDivision);
+	int currentUnit = (vquot * pt->unitsPerDivision) + (divsAbove * pt->unitsPerDivision);
 	int majorUnit	= pt->unitsPerDivision * pt->majorDivisionIntervals;
 	while(divs.quot > 0)
 	{
