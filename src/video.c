@@ -282,6 +282,9 @@ void INTERRUPT TIM2_IRQHandler()
 			currentOutputBuf = frameBuf1;
 		}
 
+		// Output cycle count for profiling
+		ITM_Port32(2)	= DWT->CYCCNT;
+
 		// Trigger PendSV interrupt to schedule the render of next frame
 		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 	}
