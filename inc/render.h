@@ -33,6 +33,26 @@ typedef struct
 {
 	RENDERER hdr;
 	u16 valueOffset;
+} ARROW, *PARROW;
+
+typedef struct
+{
+	RENDERER hdr;
+	u16 pitchValueOffset;
+	u16 rollValueOffset;
+	u8 unitsPerDivision;
+	u8 pixelsPerDivision;
+	u8 pitchLadderWidth;
+	u8 pitchLadderDirectionHeight;
+	u8 horizonLineWidth;
+	u8 centreClearance;
+	PFONT font;
+} AHI, *PAHI;
+
+typedef struct
+{
+	RENDERER hdr;
+	u16 valueOffset;
 	u8 unitsPerDivision;
 	u8 pixelsPerDivision;
 	u8 majorDivisionIntervals;

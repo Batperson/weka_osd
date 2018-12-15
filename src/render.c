@@ -17,7 +17,7 @@
 #include "model.h"
 #include "render.h"
 
-#define DEGREE_PIXEL_RATIO 4
+#define LINE_RENDER_BATCH 6
 
 extern FONT systemFont;
 extern char szBtn0Msg[];
@@ -25,31 +25,106 @@ extern char szBtn1Msg[];
 
 void renderArtificialHorizon(PRENDERER r)
 {
+	PAHI pa = (PAHI)r;
 	COLOUR ofc		= selectForeColour(r->colour);
 
-	DU hw = r->rect.width / 2;
-	DU hh = r->rect.height / 2;
+	POINT ctr = {
+			r->rect.left + (r->rect.width >> 1),
+			r->rect.top + (r->rect.height >> 1) };
 
-	LINE lines[] = {
-		{ { hw - 100, hh }, { hw - 20, hh } },
-		{ { hw + 100, hh }, { hw + 20, hh } },
-		{ { hw - 30, hh - (10 * DEGREE_PIXEL_RATIO) },  { hw + 30, hh - (10 * DEGREE_PIXEL_RATIO) } },
-		{ { hw - 30, hh - (20 * DEGREE_PIXEL_RATIO) },  { hw + 30, hh - (20 * DEGREE_PIXEL_RATIO) } },
-		{ { hw - 30, hh + (10 * DEGREE_PIXEL_RATIO) },  { hw + 30, hh + (10 * DEGREE_PIXEL_RATIO) } },
-		{ { hw - 30, hh + (20 * DEGREE_PIXEL_RATIO) },  { hw + 30, hh + (20 * DEGREE_PIXEL_RATIO) } }
-	};
+	LINE lines[LINE_RENDER_BATCH * 4];
 
-	POINT ctr = { r->rect.left + hw, r->rect.top + hh };
-	rotatePts((PPOINT)lines, sizeof(lines) / sizeof(POINT), &ctr, model.att.roll);
-	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), 0, model.att.pitch);
+	float pitchValue = DEREFERENCE_OFFSET_FLOAT(pa->pitchValueOffset);
+	float rollValue = DEREFERENCE_OFFSET_FLOAT(pa->rollValueOffset);
 
-	offsetPts((PPOINT)lines, sizeof(lines) / sizeof(POINT), +1, +1);
-	drawLines(lines, sizeof(lines) / sizeof(LINE), None, NULL);
+	int vquot;
+	int divs		= pa->hdr.rect.height / pa->pixelsPerDivision;
+	float vrem		= remquo(pitchValue, pa->unitsPerDivision, &vquot);
+
+	DU offset	  	= nearbyintf((vrem / pa->unitsPerDivision) * pa->pixelsPerDivision);
+
+	int divsAbove	= divs >> 1;
+	DU currentPos	= (ctr.y - (divsAbove * pa->pixelsPerDivision)) - offset;
+
+	int currentUnit = (vquot * pa->unitsPerDivision) - (divsAbove * pa->unitsPerDivision);
+
+	while(divs > 0)
+	{
+		int lcnt = 0;
+		int cnt = (divs >= LINE_RENDER_BATCH) ? LINE_RENDER_BATCH : divs;
+		for(int i=0; i<cnt; i++)
+		{
+			int rungIncr = (currentUnit > 0) ? -pa->pitchLadderDirectionHeight : pa->pitchLadderDirectionHeight;
+			if(currentUnit == 0)
+			{
+				lines[lcnt].p1.x 	= ctr.x - pa->centreClearance - pa->horizonLineWidth;
+				lines[lcnt].p1.y 	= currentPos;
+				lines[lcnt].p2.x 	= ctr.x - pa->centreClearance;
+				lines[lcnt++].p2.y 	= currentPos;
+				lines[lcnt].p1.x 	= ctr.x + pa->centreClearance;
+				lines[lcnt].p1.y 	= currentPos;
+				lines[lcnt].p2.x 	= ctr.x + pa->centreClearance + pa->horizonLineWidth;
+				lines[lcnt++].p2.y 	= currentPos;
+			}
+			else
+			{
+				lines[lcnt].p1.x 	= ctr.x - pa->centreClearance - pa->pitchLadderWidth;
+				lines[lcnt].p1.y 	= currentPos;
+				lines[lcnt].p2.x 	= ctr.x - pa->centreClearance;
+				lines[lcnt++].p2.y 	= currentPos;
+				lines[lcnt].p1.x	= ctr.x - pa->centreClearance;
+				lines[lcnt].p1.y 	= currentPos;
+				lines[lcnt].p2.x	= ctr.x - pa->centreClearance;
+				lines[lcnt++].p2.y 	= currentPos + rungIncr;
+				lines[lcnt].p1.x 	= ctr.x + pa->centreClearance;
+				lines[lcnt].p1.y 	= currentPos;
+				lines[lcnt].p2.x 	= ctr.x + pa->centreClearance + pa->pitchLadderWidth;
+				lines[lcnt++].p2.y 	= currentPos;
+				lines[lcnt].p1.x	= ctr.x + pa->centreClearance;
+				lines[lcnt].p1.y 	= currentPos;
+				lines[lcnt].p2.x	= ctr.x + pa->centreClearance;
+				lines[lcnt++].p2.y 	= currentPos + rungIncr;
+			}
+
+			currentUnit		+= pa->unitsPerDivision;
+			currentPos		+= pa->pixelsPerDivision;
+		}
+
+		rotatePts((PPOINT)lines, lcnt << 1, &ctr, rollValue);
+		drawLines(lines, lcnt, None, &pa->hdr.rect);
+
+		divs -= cnt;
+	}
 
 	selectForeColour(ofc);
 }
 
-#define LINE_RENDER_BATCH 6
+void renderArrow(PRENDERER r)
+{
+	PARROW pa = (PARROW)r;
+	DU midX	= r->rect.left + (r->rect.width >> 1);
+	DU midY	= r->rect.top + (r->rect.height >> 1);
+	DU btmY = r->rect.top + (r->rect.height - (r->rect.height / 3));
+
+	POINT ctr = { midX, midY };
+	POINT pts[5] = {
+			{ midX, r->rect.top },
+			{ r->rect.left, r->rect.top + r->rect.height },
+			{ midX, btmY },
+			{ r->rect.left + r->rect.width,  r->rect.top + r->rect.height },
+			{ midX, r->rect.top }
+	};
+
+	float value		= DEREFERENCE_OFFSET_FLOAT(pa->valueOffset);
+
+	COLOUR ofc		= selectForeColour(r->colour);
+
+	rotatePts(pts, sizeof(pts) / sizeof(POINT), &ctr, value);
+	drawPolyLine(pts, sizeof(pts) / sizeof(POINT), None, NULL);
+	floodFill(&ctr, r->colour);
+
+	selectForeColour(ofc);
+}
 
 void renderHeadingTape(PRENDERER r)
 {
@@ -64,13 +139,13 @@ void renderHeadingTape(PRENDERER r)
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
 
 	int vquot;
+	int divs		= pt->hdr.rect.width / pt->pixelsPerDivision;
 	float vrem		= remquo(value, pt->unitsPerDivision, &vquot);
 
-	div_t divs		= div(pt->hdr.rect.width, pt->pixelsPerDivision);
 	DU offset	  	= nearbyintf((vrem / pt->unitsPerDivision) * pt->pixelsPerDivision);
 	DU midPoint 	= pt->hdr.rect.left + (pt->hdr.rect.width >> 1);
 
-	int divsLeft	= divs.quot >> 1;
+	int divsLeft	= divs >> 1;
 	DU startPoint	= (midPoint - (divsLeft * pt->pixelsPerDivision)) - offset;
 
 	rc.height 		= pt->font->charheight;
@@ -98,9 +173,9 @@ void renderHeadingTape(PRENDERER r)
 	if(currentUnit < 0)
 		currentUnit += 360;
 
-	while(divs.quot > 0)
+	while(divs > 0)
 	{
-		int lcnt = (divs.quot >= LINE_RENDER_BATCH) ? LINE_RENDER_BATCH : divs.quot;
+		int lcnt = (divs >= LINE_RENDER_BATCH) ? LINE_RENDER_BATCH : divs;
 		for(int i=0; i<lcnt; i++)
 		{
 			lines[i].p1.x	= startPoint;
@@ -164,7 +239,7 @@ void renderHeadingTape(PRENDERER r)
 
 		drawLines(lines, lcnt, None, &pt->hdr.rect);
 
-		divs.quot -= lcnt;
+		divs -= lcnt;
 	}
 
 	const DU cx	= 7;
@@ -206,13 +281,13 @@ void renderTape(PRENDERER r)
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
 
 	int vquot;
+	int divs		= pt->hdr.rect.height / pt->pixelsPerDivision;
 	float vrem		= remquo(value, pt->unitsPerDivision, &vquot);
 
-	div_t divs		= div(pt->hdr.rect.height, pt->pixelsPerDivision);
 	DU offset	  	= nearbyintf((vrem / pt->unitsPerDivision) * pt->pixelsPerDivision);
 	DU midPoint 	= pt->hdr.rect.height >> 1;
 
-	int divsAbove	= divs.quot >> 1;
+	int divsAbove	= divs >> 1;
 	DU startPoint	= pt->hdr.rect.top + (midPoint - (divsAbove * pt->pixelsPerDivision)) + offset;
 
 	rc.width 		= pt->hdr.rect.width - (pt->majorDivisionWidth + 2);
@@ -237,9 +312,9 @@ void renderTape(PRENDERER r)
 
 	int currentUnit = (vquot * pt->unitsPerDivision) + (divsAbove * pt->unitsPerDivision);
 	int majorUnit	= pt->unitsPerDivision * pt->majorDivisionIntervals;
-	while(divs.quot > 0)
+	while(divs > 0)
 	{
-		int lcnt = (divs.quot >= LINE_RENDER_BATCH) ? LINE_RENDER_BATCH : divs.quot;
+		int lcnt = (divs >= LINE_RENDER_BATCH) ? LINE_RENDER_BATCH : divs;
 		for(int i=0; i<lcnt; i++)
 		{
 			lines[i].p1.x	= x1;
@@ -281,7 +356,7 @@ void renderTape(PRENDERER r)
 
 		drawLines(lines, lcnt, None, &pt->hdr.rect);
 
-		divs.quot -= lcnt;
+		divs -= lcnt;
 	}
 
 	DU arrowHeight			= pt->font->charheight + 4;
@@ -339,8 +414,18 @@ void INTERRUPT PendSV_Handler()
 	renderTape(&tp2.hdr);
 	renderHeadingTape(&tp3.hdr);
 
-	RENDERER ahi = { 0, { 0, 0, 360, 288 }, clr, NULL };
-	renderArtificialHorizon(&ahi);
+	ARROW arrow = { { RF_OUTLINE, { 300,  50, 10, 20 }, clr, NULL }, offsetof(MODEL, att.homeVector) };
+	renderArrow(&arrow.hdr);
+
+	AHI ahi = { { 0, { 0, 0, 360, 288 }, clr, NULL },
+			offsetof(MODEL, att.pitch),
+			offsetof(MODEL, att.roll),
+			10, 60,
+			30, 5,
+			80, 20 };
+
+
+	renderArtificialHorizon(&ahi.hdr);
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;
