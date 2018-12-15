@@ -166,15 +166,12 @@ void drawArrow(PRECT rect, DrawFlags alignment)
 	}
 }
 
-void drawLine(PLINE line, DrawFlags flags, PRECT clip)
+void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 {
-	drawLines(line, 1, foreground, clip);
-}
-
-void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip)
-{
-	while(cnt--)
+	while(cnt >= 2)
 	{
+		PLINE line = (PLINE)pt;
+
 		if(clip == NULL) clip = &rcBuf;
 
 		DU dx, dy, e;
@@ -276,8 +273,24 @@ void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip)
 			}
 		}
 
-		line++;
+		cnt -= incr;
+		pt += incr;
 	}
+}
+
+void drawLine(PLINE line, DrawFlags flags, PRECT clip)
+{
+	drawLinesImpl((PPOINT)line, 2, 2, foreground, clip);
+}
+
+void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip)
+{
+	drawLinesImpl((PPOINT)line, cnt * 2, 2, foreground, clip);
+}
+
+void drawPolyLine(PPOINT points, u16 cnt, DrawFlags flags, PRECT clip)
+{
+	drawLinesImpl(points, cnt, 1, flags, clip);
 }
 
 void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
@@ -313,16 +326,13 @@ void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
 		y = rect->top;
 	}
 
+	sy = 0;
 	if(flags & AlignBottom)
 	{
 		DU d;
 		y = (rect->top + rect->height) - font->charheight;
 		if((d = y - rect->top) < 0)
 			sy = -d;
-	}
-	else
-	{
-		sy = 0;
 	}
 
 	COLOUR fg 	= (flags & Inverse) ? background : foreground;
@@ -414,5 +424,10 @@ void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
 		if((x += font->charwidth) >= rect->left + rect->width)
 			break;
 	}
+}
+
+void floodFill(PPOINT pt, COLOUR clr)
+{
+	// TODO: Implement flood fill algorithm
 }
 
