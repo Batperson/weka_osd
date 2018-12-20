@@ -20,6 +20,7 @@
 #define LINE_RENDER_BATCH 6
 
 extern FONT systemFont;
+extern FONT tinyFont;
 extern char szBtn0Msg[];
 extern char szBtn1Msg[];
 
