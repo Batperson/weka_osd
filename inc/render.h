@@ -18,7 +18,8 @@ typedef enum {
 	RF_BLINK							= 0x02,
 	RF_ALIGN_RIGHT						= 0x04,
 	RF_ALIGN_BOTTOM						= 0x08,
-	RF_OUTLINE							= 0x80
+	RF_OUTLINE							= 0x80,
+	RF_CAPTION							= 0x100
 } RenderFlagsType;
 
 typedef struct
@@ -60,5 +61,27 @@ typedef struct
 	u8 minorDivisionWidth;
 	PFONT font;
 } TAPE, *PTAPE;
+
+typedef struct
+{
+	float to;
+	COLOUR colour;
+} SEGMENT, *PSEGMENT;
+
+typedef struct
+{
+	u16 cnt;
+	PSEGMENT segments;
+} RANGE, *PRANGE;
+
+typedef struct
+{
+	RENDERER hdr;
+	u16 valueOffset;
+	RANGE range;
+	RECT rect2;
+	PFONT font;
+	char* format;
+} INDICATOR, *PINDICATOR;
 
 #endif /* RENDER_H_ */

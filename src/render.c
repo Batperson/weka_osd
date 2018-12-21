@@ -24,6 +24,102 @@ extern FONT tinyFont;
 extern char szBtn0Msg[];
 extern char szBtn1Msg[];
 
+PSEGMENT getSegment(PRANGE range, float value)
+{
+	PSEGMENT seg = range->segments;
+	int i = 0;
+
+	for(; i<range->cnt-1; i++)
+	{
+		if(value < range->segments[i].to)
+		{
+			seg = &range->segments[i];
+			break;
+		}
+	}
+
+	if(i == range->cnt-1)
+		seg = &range->segments[i];
+
+	return seg;
+}
+
+void renderBatteryMeter(PRENDERER r)
+{
+	PINDICATOR pi = (PINDICATOR)r;
+
+	float value		= DEREFERENCE_OFFSET_FLOAT(pi->valueOffset);
+
+	PSEGMENT seg	= getSegment(&pi->range, value);
+
+	DU n			= r->rect.height / 3;
+
+	COLOUR ofc		= selectForeColour(r->colour);
+	COLOUR obc		= selectBackColour(seg->colour);
+
+	POINT pt[9];
+	RECT rc;
+
+	if(r->flags & RF_ALIGN_RIGHT)
+	{
+		pt[0].x		= r->rect.left;
+		pt[0].y		= r->rect.top;
+		pt[1].x		= r->rect.left + r->rect.width - 1;
+		pt[1].y		= r->rect.top;
+		pt[2].x		= pt[1].x;
+		pt[2].y		= r->rect.top + n;
+		pt[3].x		= pt[2].x + 1;
+		pt[3].y		= r->rect.top + n;
+		pt[4].x		= pt[3].x;
+		pt[4].y		= r->rect.top + r->rect.height - n;
+		pt[5].x		= pt[4].x - 1;
+		pt[5].y		= r->rect.top + r->rect.height - n;
+		pt[6].x		= pt[5].x;
+		pt[6].y		= r->rect.top + r->rect.height;
+		pt[7].x		= r->rect.left;
+		pt[7].y		= r->rect.top + r->rect.height;
+		pt[8].x		= r->rect.left;
+		pt[8].y		= r->rect.top;
+
+		rc.left		= r->rect.left + 2;
+		rc.top		= r->rect.top + 2;
+		rc.width	= r->rect.width - 4;
+		rc.height	= r->rect.height - 3;
+	}
+	else
+	{
+		pt[0].x		= r->rect.left+1;
+		pt[0].y		= r->rect.top;
+		pt[1].x		= pt[0].x;
+		pt[1].y		= r->rect.top + n;
+		pt[2].x		= pt[2].x - 1;
+		pt[2].y		= r->rect.top + n;
+		pt[3].x		= pt[2].x;
+		pt[3].y		= r->rect.top + r->rect.height - n;
+		pt[4].x		= pt[3].x + 1;
+		pt[4].y		= r->rect.top + r->rect.height - n;
+		pt[5].x		= pt[4].x;
+		pt[5].y		= r->rect.top + r->rect.height;
+		pt[6].x		= r->rect.left + r->rect.width;
+		pt[6].y		= r->rect.top + r->rect.height;
+		pt[7].x		= r->rect.left + r->rect.width;
+		pt[7].y		= r->rect.top;
+		pt[8].x		= r->rect.left;
+		pt[8].y		= r->rect.top;
+
+		rc.left		= r->rect.left + 3;
+		rc.top		= r->rect.top + 2;
+		rc.width	= r->rect.width - 5;
+		rc.height	= r->rect.height - 4;
+	}
+
+	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
+	drawRect(&rc, Fill);
+
+	selectForeColour(ofc);
+	selectBackColour(obc);
+}
+
 void renderArtificialHorizon(PRENDERER r)
 {
 	PAHI pa = (PAHI)r;
@@ -390,24 +486,6 @@ void INTERRUPT PendSV_Handler()
 
 	COLOUR clr =  RGB(2,3,2);
 
-
-	RECT rc = { 1, 20, 100, 20 };
-	drawTestPattern(&rc);
-
-	RECT rc2 = { 300, 240, 60, 20 };
-	if(blinkOn())
-	{
-		selectForeColour(RGB(3,3,0));
-		drawText(&rc2, &systemFont, AlignLeft | Inverse, "ARMED");
-		selectForeColour(RGB(3,3,3));
-	}
-
-	rc2.top = 160;
-	drawText(&rc2, &systemFont, AlignLeft | Inverse, szBtn0Msg);
-
-	rc2.top = 180;
-	drawText(&rc2, &systemFont, AlignLeft, szBtn1Msg);
-
 	TAPE tp = { { RF_ALIGN_RIGHT   | RF_OUTLINE, { 338,  0, 20, 288 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
 	TAPE tp2 = { { RF_ALIGN_LEFT   | RF_OUTLINE, { 1,    0, 20, 288 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 4, 2, &systemFont };
 	TAPE tp3 = { { RF_ALIGN_BOTTOM | RF_OUTLINE, { 30, 238, 300, 20 }, clr, NULL }, offsetof(MODEL, att.heading),    2, 10, 5, 4, 2, &systemFont };
@@ -425,8 +503,32 @@ void INTERRUPT PendSV_Handler()
 			30, 5,
 			80, 20 };
 
+	SEGMENT segs[] = { { 9.6f, RED }, { 10.0f, YELLOW }, { 12.6f, GREEN  } };
+	INDICATOR battMeter = { { RF_ALIGN_RIGHT, { 30, 90, 30, 12 }, clr, NULL },
+			offsetof(MODEL, elec.voltage),
+			{ sizeof(segs) / sizeof(SEGMENT), segs },
+			{ 0, 0, 0, 0},
+			&systemFont };
+
+	renderBatteryMeter(&battMeter.hdr);
+
+	sprintf(szBtn1Msg, "%fV", model.elec.voltage);
 
 	renderArtificialHorizon(&ahi.hdr);
+
+	RECT rc2 = { 300, 240, 60, 20 };
+	if(blinkOn())
+	{
+		selectForeColour(RGB(3,3,0));
+		drawText(&rc2, &systemFont, AlignLeft | Inverse, "ARMED");
+		selectForeColour(RGB(3,3,3));
+	}
+
+	rc2.top = 160;
+	drawText(&rc2, &systemFont, AlignLeft | Inverse, szBtn0Msg);
+
+	rc2.top = 180;
+	drawText(&rc2, &systemFont, AlignLeft, szBtn1Msg);
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;
