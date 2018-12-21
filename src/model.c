@@ -32,4 +32,5 @@ void demoModelUpdate()
 	model.loc.altitude 		= (sinf(val2) * 40) + 50;
 	model.vel.vertical		= (cosf(val2) * 10);
 	model.vel.horizontal	= (cosf(val2) * 10) + 20;
+	model.elec.voltage		= (sinf(val2) * 1.8) + 10.8;
 }
