@@ -33,4 +33,5 @@ void demoModelUpdate()
 	model.vel.vertical		= (cosf(val2) * 10);
 	model.vel.horizontal	= (cosf(val2) * 10) + 20;
 	model.elec.voltage		= (sinf(val2) * 1.8) + 10.8;
+	model.elec.current		= (sinf(val1) * 20) + 40;
 }
