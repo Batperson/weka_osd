@@ -44,18 +44,79 @@ PSEGMENT getSegment(PRANGE range, float value)
 	return seg;
 }
 
+void renderBarFill(PRECT rc, PSEGMENT seg, float scale, RenderFlagsType flags)
+{
+	COLOUR obc		= selectBackColour(seg->colour);
+
+	RECT r = { rc->left, rc->top };
+	if(flags & RF_VERTICAL)
+	{
+		r.width		= rc->width;
+		r.height	= rc->height * scale;
+		if(r.height <= 0)
+			r.height = 1;
+	}
+	else
+	{
+		r.height	= rc->height;
+		r.width		= rc->width * scale;
+		if(r.width <= 0)
+			r.width = 1;
+	}
+
+	drawRect(&r, Fill);
+
+	selectBackColour(obc);
+}
+
+void renderBarMeter(PRENDERER r)
+{
+	PINDICATOR pi = (PINDICATOR)r;
+
+	float value		= DEREFERENCE_OFFSET_FLOAT(pi->valueOffset);
+	float scale		= (value - pi->range.min) / (pi->range.max - pi->range.min);
+	if(scale > 1)
+		scale = 1;
+	else if(scale <= 0)
+		scale = 0;
+
+	PSEGMENT seg	= getSegment(&pi->range, value);
+
+	COLOUR ofc		= selectForeColour(r->colour);
+
+	RECT rc			= { r->rect.left + 2, r->rect.top + 2, r->rect.width - 4, r->rect.height - 4 };
+
+	drawRect(&r->rect, Outline);
+
+	renderBarFill(&rc, seg, scale, r->flags);
+
+	if(r->flags & RF_CAPTION)
+	{
+		char sz[8];
+		snprintf(sz, sizeof(sz), pi->format, value);
+
+		drawText(&pi->rect2, pi->font, r->flags & RF_OUTLINE, sz);
+	}
+
+	selectForeColour(ofc);
+}
+
 void renderBatteryMeter(PRENDERER r)
 {
 	PINDICATOR pi = (PINDICATOR)r;
 
 	float value		= DEREFERENCE_OFFSET_FLOAT(pi->valueOffset);
+	float scale		= (value - pi->range.min) / (pi->range.max - pi->range.min);
+	if(scale > 1)
+		scale = 1;
+	else if(scale <= 0)
+		scale = 0;
 
 	PSEGMENT seg	= getSegment(&pi->range, value);
 
 	DU n			= r->rect.height / 3;
 
 	COLOUR ofc		= selectForeColour(r->colour);
-	COLOUR obc		= selectBackColour(seg->colour);
 
 	POINT pt[9];
 	RECT rc;
@@ -83,41 +144,49 @@ void renderBatteryMeter(PRENDERER r)
 
 		rc.left		= r->rect.left + 2;
 		rc.top		= r->rect.top + 2;
-		rc.width	= r->rect.width - 4;
 		rc.height	= r->rect.height - 3;
+		rc.width	= r->rect.width - 4;
 	}
 	else
 	{
-		pt[0].x		= r->rect.left+1;
+		pt[0].x		= r->rect.left + 1;
 		pt[0].y		= r->rect.top;
 		pt[1].x		= pt[0].x;
 		pt[1].y		= r->rect.top + n;
-		pt[2].x		= pt[2].x - 1;
+		pt[2].x		= r->rect.left;
 		pt[2].y		= r->rect.top + n;
 		pt[3].x		= pt[2].x;
-		pt[3].y		= r->rect.top + r->rect.height - n;
+		pt[3].y		= r->rect.top + (r->rect.height - n);
 		pt[4].x		= pt[3].x + 1;
-		pt[4].y		= r->rect.top + r->rect.height - n;
+		pt[4].y		= r->rect.top + (r->rect.height - n);
 		pt[5].x		= pt[4].x;
 		pt[5].y		= r->rect.top + r->rect.height;
 		pt[6].x		= r->rect.left + r->rect.width;
 		pt[6].y		= r->rect.top + r->rect.height;
 		pt[7].x		= r->rect.left + r->rect.width;
 		pt[7].y		= r->rect.top;
-		pt[8].x		= r->rect.left;
+		pt[8].x		= r->rect.left + 1;
 		pt[8].y		= r->rect.top;
 
 		rc.left		= r->rect.left + 3;
 		rc.top		= r->rect.top + 2;
-		rc.width	= r->rect.width - 5;
 		rc.height	= r->rect.height - 4;
+		rc.width	= r->rect.width - 4;
 	}
 
 	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
-	drawRect(&rc, Fill);
+
+	renderBarFill(&rc, seg, scale, r->flags);
+
+	if(r->flags & RF_CAPTION)
+	{
+		char sz[8];
+		snprintf(sz, sizeof(sz), pi->format, value);
+
+		drawText(&pi->rect2, pi->font, r->flags & RF_OUTLINE, sz);
+	}
 
 	selectForeColour(ofc);
-	selectBackColour(obc);
 }
 
 void renderArtificialHorizon(PRENDERER r)
@@ -227,10 +296,11 @@ void renderHeadingTape(PRENDERER r)
 {
 	char sz[6];
 	LINE lines[LINE_RENDER_BATCH];
-	DrawFlags df;
+
 	RECT rc;
 
 	PTAPE pt 		= (PTAPE)r;
+	DrawFlags df	= pt->hdr.flags & (RF_ALIGN_BOTTOM | RF_OUTLINE);
 	COLOUR ofc		= selectForeColour(pt->hdr.colour);
 
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
@@ -308,9 +378,7 @@ void renderHeadingTape(PRENDERER r)
 
 				int stringWidth = strlen(sz) * pt->font->charwidth;
 
-				df				= (pt->hdr.flags & RF_ALIGN_BOTTOM) ? AlignBottom : AlignTop;
-				if(pt->hdr.flags & RF_OUTLINE)
-					df |= Outline;
+				DrawFlags df2	= None;
 
 				rc.left			= startPoint - (stringWidth >> 1);
 				rc.width		= stringWidth;
@@ -320,14 +388,14 @@ void renderHeadingTape(PRENDERER r)
 				{
 					rc.left		-= disc;
 					rc.width 	+= disc;
-					df			|= AlignRight;
+					df2			= AlignRight;
 				}
 				else if((disc = (rc.left + rc.width) - (pt->hdr.rect.left + pt->hdr.rect.width)) > 0)
 				{
 					rc.left -= disc;
 				}
 
-				drawText(&rc, pt->font, df, sz);
+				drawText(&rc, pt->font, df | df2, sz);
 			}
 
 			currentUnit		+= pt->unitsPerDivision;
@@ -370,10 +438,10 @@ void renderTape(PRENDERER r)
 
 	char sz[6];
 	LINE lines[LINE_RENDER_BATCH];
-	DrawFlags df;
 	RECT rc;
 
 	COLOUR ofc		= selectForeColour(pt->hdr.colour);
+	DrawFlags df	= pt->hdr.flags & (RF_ALIGN_RIGHT | RF_OUTLINE);
 
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
 
@@ -423,9 +491,7 @@ void renderTape(PRENDERER r)
 			{
 				lines[i].p2.x = x3;
 
-				df				= (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignRight : AlignLeft;
-				if(pt->hdr.flags & RF_OUTLINE)
-					df |= Outline;
+				DrawFlags df2	= None;
 
 				rc.top			= startPoint - (pt->font->charheight >> 1);
 				rc.height		= pt->font->charheight;
@@ -435,7 +501,7 @@ void renderTape(PRENDERER r)
 				{
 					rc.top 		-= disc;
 					rc.height 	+= disc;
-					df			|= AlignBottom;
+					df2			= AlignBottom;
 				}
 				else if((disc = (rc.top + rc.height) - (pt->hdr.rect.top + pt->hdr.rect.height)) > 0)
 				{
@@ -444,7 +510,7 @@ void renderTape(PRENDERER r)
 
 				sprintf(sz, "%d", currentUnit);
 
-				drawText(&rc, pt->font, df, sz);
+				drawText(&rc, pt->font, df | df2, sz);
 			}
 
 			currentUnit		-= pt->unitsPerDivision;
@@ -503,20 +569,28 @@ void INTERRUPT PendSV_Handler()
 			30, 5,
 			80, 20 };
 
-	SEGMENT segs[] = { { 9.6f, RED }, { 10.0f, YELLOW }, { 12.6f, GREEN  } };
-	INDICATOR battMeter = { { RF_ALIGN_RIGHT, { 30, 90, 30, 12 }, clr, NULL },
+	SEGMENT segs[] = { { 9.6f, RED }, { 10.0f, ORANGE }, { 10.8f, YELLOW }, { 12.6f, GREEN  } };
+	INDICATOR battMeter = { { RF_ALIGN_LEFT | RF_CAPTION | RF_OUTLINE, { 30, 20, 25, 12 }, clr, NULL },
 			offsetof(MODEL, elec.voltage),
-			{ sizeof(segs) / sizeof(SEGMENT), segs },
-			{ 0, 0, 0, 0},
-			&systemFont };
+			{ 9.0f, 12.6f, sizeof(segs) / sizeof(SEGMENT), segs },
+			{ 56, 22, 40, 12},
+			&systemFont,
+			"%.1fV" };
+
+	SEGMENT segs2[] = { { 40.0f, GREEN }, { 50.0f, YELLOW }, { 60.0f, RED  } };
+	INDICATOR ampMeter = { { RF_ALIGN_LEFT | RF_CAPTION | RF_OUTLINE, { 30, 34, 25, 12 }, clr, NULL },
+			offsetof(MODEL, elec.current),
+			{ 0.0f, 60.0f, sizeof(segs2) / sizeof(SEGMENT), segs2 },
+			{ 56, 36, 40, 12},
+			&systemFont,
+			"%.1fA" };
 
 	renderBatteryMeter(&battMeter.hdr);
-
-	sprintf(szBtn1Msg, "%fV", model.elec.voltage);
+	renderBarMeter(&ampMeter.hdr);
 
 	renderArtificialHorizon(&ahi.hdr);
 
-	RECT rc2 = { 300, 240, 60, 20 };
+	RECT rc2 = { 300, 265, 60, 20 };
 	if(blinkOn())
 	{
 		selectForeColour(RGB(3,3,0));
