@@ -100,6 +100,12 @@ typedef struct
 
 ALWAYS_INLINE u8 ptInRect(PRECT rc, DU x, DU y) { if(x < rc->left) return 0; if(y < rc->top) return 0; if(x >= rc->left + rc->width) return 0; if(y >= rc->top + rc->height) return 0; return 1; }
 
+void initRect(PRECT rc, DU left, DU top, DU width, DU height);
+void inflateRect(PRECT rc, DU width, DU height);
+void offsetRect(PRECT rc, DU left, DU top);
+void moveRect(PRECT rc, DU left, DU top);
+void sizeRect(PRECT rc, DU width, DU height);
+
 void offsetPts(PPOINT ppt, u16 cnt, DU dx, DU dy);
 void rotatePts(PPOINT ppt, u16 cnt, PPOINT ctr, float angle);
 

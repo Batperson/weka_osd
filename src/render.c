@@ -1,7 +1,8 @@
 /*
  * render.c
  *
- * Rendering of the OSD
+ * Renderer implementation
+ * High-level routines which draw the OSD components to the frame buffer
  */
 
 #include "stm32f4xx.h"
@@ -19,10 +20,11 @@
 
 #define LINE_RENDER_BATCH 6
 
-extern FONT systemFont;
-extern FONT tinyFont;
+
 extern char szBtn0Msg[];
 extern char szBtn1Msg[];
+
+PRENDERER* renderers;
 
 PSEGMENT getSegment(PRANGE range, float value)
 {
@@ -550,6 +552,7 @@ void INTERRUPT PendSV_Handler()
 
 	clearRenderBuf();
 
+	/*
 	COLOUR clr =  RGB(2,3,2);
 
 	TAPE tp = { { RF_ALIGN_RIGHT   | RF_OUTLINE, { 338,  0, 20, 288 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
@@ -603,6 +606,7 @@ void INTERRUPT PendSV_Handler()
 
 	rc2.top = 180;
 	drawText(&rc2, &systemFont, AlignLeft, szBtn1Msg);
+	*/
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;

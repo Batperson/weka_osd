@@ -8,6 +8,7 @@
 #include "graphics.h"
 #include "model.h"
 #include "video.h"
+#include "configuration.h"
 
 /*
   Pin and peripheral Usage:
@@ -71,6 +72,7 @@ int main(void)
   initI2C1();
   initVideoChips();
   initSystem();
+  initRenderers();
   initVideo();
 
   //setLowPowerMode(LowPowerDAC1);

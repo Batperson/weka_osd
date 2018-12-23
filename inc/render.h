@@ -7,9 +7,6 @@
 #ifndef RENDER_H_
 #define RENDER_H_
 
-//typedef struct RENDERER* PRENDERER;
-//typedef void (*RENDERPROC)(PRENDERER r);
-
 typedef enum {
 	RF_NONE								= 0x00,
 	RF_ALIGN_LEFT						= 0x00,
@@ -27,6 +24,7 @@ typedef enum {
 
 typedef struct
 {
+	u16 size;
 	u16 flags;
 	RECT rect;
 	COLOUR colour;
@@ -88,5 +86,9 @@ typedef struct
 	PFONT font;
 	char* format;
 } INDICATOR, *PINDICATOR;
+
+typedef void (*RENDERPROC)(PRENDERER r);
+
+extern PRENDERER* renderers;
 
 #endif /* RENDER_H_ */

@@ -23,6 +23,40 @@ static RECT rcBuf = { 0, 0, FRAME_BUF_WIDTH, FRAME_BUF_HEIGHT };
 static COLOUR foreground = RGB(3,3,3);
 static COLOUR background = RGB(0,0,0);
 
+void initRect(PRECT rc, DU left, DU top, DU width, DU height)
+{
+	rc->left 	= left;
+	rc->top		= top;
+	rc->width	= width;
+	rc->height	= height;
+}
+
+void inflateRect(PRECT rc, DU width, DU height)
+{
+	rc->left	-= width;
+	rc->width	+= width;
+	rc->top		-= height;
+	rc->height	+= height;
+}
+
+void offsetRect(PRECT rc, DU left, DU top)
+{
+	rc->left	+= left;
+	rc->top		+= top;
+}
+
+void moveRect(PRECT rc, DU left, DU top)
+{
+	rc->left	= left;
+	rc->top		= top;
+}
+
+void sizeRect(PRECT rc, DU width, DU height)
+{
+	rc->width	= width;
+	rc->height	= height;
+}
+
 COLOUR selectForeColour(COLOUR fg)
 {
 	COLOUR retval = foreground;
