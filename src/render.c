@@ -71,6 +71,19 @@ void renderBarFill(PRECT rc, PSEGMENT seg, float scale, RenderFlagsType flags)
 	selectBackColour(obc);
 }
 
+void renderLabel(PRENDERER r)
+{
+	PLABEL pl = (PLABEL)r;
+	COLOUR ofc		= selectForeColour(r->colour);
+
+	if(pl->text)
+	{
+		drawText(&pl->hdr.rect, pl->font, pl->hdr.flags & (RF_ALIGN_TOP | RF_ALIGN_RIGHT | RF_INVERSE | RF_OUTLINE), pl->text);
+	}
+
+	selectForeColour(ofc);
+}
+
 void renderBarMeter(PRENDERER r)
 {
 	PINDICATOR pi = (PINDICATOR)r;
@@ -552,61 +565,16 @@ void INTERRUPT PendSV_Handler()
 
 	clearRenderBuf();
 
-	/*
-	COLOUR clr =  RGB(2,3,2);
-
-	TAPE tp = { { RF_ALIGN_RIGHT   | RF_OUTLINE, { 338,  0, 20, 288 }, clr, NULL }, offsetof(MODEL, loc.altitude),   1, 20, 5, 4, 2, &systemFont };
-	TAPE tp2 = { { RF_ALIGN_LEFT   | RF_OUTLINE, { 1,    0, 20, 288 }, clr, NULL }, offsetof(MODEL, vel.horizontal), 1, 20, 5, 4, 2, &systemFont };
-	TAPE tp3 = { { RF_ALIGN_BOTTOM | RF_OUTLINE, { 30, 238, 300, 20 }, clr, NULL }, offsetof(MODEL, att.heading),    2, 10, 5, 4, 2, &systemFont };
-	renderTape(&tp.hdr);
-	renderTape(&tp2.hdr);
-	renderHeadingTape(&tp3.hdr);
-
-	ARROW arrow = { { RF_OUTLINE, { 300,  50, 10, 20 }, clr, NULL }, offsetof(MODEL, att.homeVector) };
-	renderArrow(&arrow.hdr);
-
-	AHI ahi = { { 0, { 0, 0, 360, 288 }, clr, NULL },
-			offsetof(MODEL, att.pitch),
-			offsetof(MODEL, att.roll),
-			10, 60,
-			30, 5,
-			80, 20 };
-
-	SEGMENT segs[] = { { 9.6f, RED }, { 10.0f, ORANGE }, { 10.8f, YELLOW }, { 12.6f, GREEN  } };
-	INDICATOR battMeter = { { RF_ALIGN_LEFT | RF_CAPTION | RF_OUTLINE, { 30, 20, 25, 12 }, clr, NULL },
-			offsetof(MODEL, elec.voltage),
-			{ 9.0f, 12.6f, sizeof(segs) / sizeof(SEGMENT), segs },
-			{ 56, 22, 40, 12},
-			&systemFont,
-			"%.1fV" };
-
-	SEGMENT segs2[] = { { 40.0f, GREEN }, { 50.0f, YELLOW }, { 60.0f, RED  } };
-	INDICATOR ampMeter = { { RF_ALIGN_LEFT | RF_CAPTION | RF_OUTLINE, { 30, 34, 25, 12 }, clr, NULL },
-			offsetof(MODEL, elec.current),
-			{ 0.0f, 60.0f, sizeof(segs2) / sizeof(SEGMENT), segs2 },
-			{ 56, 36, 40, 12},
-			&systemFont,
-			"%.1fA" };
-
-	renderBatteryMeter(&battMeter.hdr);
-	renderBarMeter(&ampMeter.hdr);
-
-	renderArtificialHorizon(&ahi.hdr);
-
-	RECT rc2 = { 300, 265, 60, 20 };
-	if(blinkOn())
+	for(PRENDERER* p = renderers; *p != NULL; p++)
 	{
-		selectForeColour(RGB(3,3,0));
-		drawText(&rc2, &systemFont, AlignLeft | Inverse, "ARMED");
-		selectForeColour(RGB(3,3,3));
+		PRENDERER r = *p;
+
+		RenderFlagsType rf = r->flags;
+		if((rf & RF_HIDDEN) || ((rf & RF_BLINK) &&  blinkOn()))
+			continue;
+
+		r->renderProc((struct RENDERER*)r);
 	}
-
-	rc2.top = 160;
-	drawText(&rc2, &systemFont, AlignLeft | Inverse, szBtn0Msg);
-
-	rc2.top = 180;
-	drawText(&rc2, &systemFont, AlignLeft, szBtn1Msg);
-	*/
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;

@@ -14,13 +14,20 @@ typedef enum {
 	RF_HORIZONTAL						= 0x00,
 	RF_ALIGN_RIGHT						= 0x01,
 	RF_ALIGN_BOTTOM						= 0x02,
-	RF_HIDDEN							= 0x04,
-	RF_BLINK							= 0x08,
+	RF_INVERSE							= 0x40,
 	RF_OUTLINE							= 0x80,
+
 	RF_CAPTION							= 0x100,
-	RF_VERTICAL							= 0x200
+	RF_VERTICAL							= 0x200,
+
+	RF_BLINK							= 0x4000,
+	RF_HIDDEN							= 0x8000,
 
 } RenderFlagsType;
+
+struct RENDERER;
+
+typedef void (*RENDERPROC)(struct RENDERER* r);
 
 typedef struct
 {
@@ -28,7 +35,7 @@ typedef struct
 	u16 flags;
 	RECT rect;
 	COLOUR colour;
-	void* /*RENDERPROC*/ renderProc;
+	RENDERPROC renderProc;
 } RENDERER, *PRENDERER;
 
 typedef struct
@@ -87,7 +94,12 @@ typedef struct
 	char* format;
 } INDICATOR, *PINDICATOR;
 
-typedef void (*RENDERPROC)(PRENDERER r);
+typedef struct
+{
+	RENDERER hdr;
+	PFONT font;
+	char* text;
+} LABEL, *PLABEL;
 
 extern PRENDERER* renderers;
 
