@@ -138,16 +138,17 @@ void initRenderers()
 
 	PTAPE altitude				= allocTape();
 	initRect(&altitude->hdr.rect, 338, 0, 20, 288);
-	altitude->hdr.flags			= RF_ALIGN_RIGHT;
+	altitude->hdr.flags			= RF_ALIGN_RIGHT | RF_OUTLINE;
 	altitude->valueOffset		= offsetof(MODEL, loc.altitude);
 
 	PTAPE airspeed				= allocTape();
 	initRect(&airspeed->hdr.rect, 1, 0, 20, 288);
+	airspeed->hdr.flags			= RF_ALIGN_LEFT | RF_OUTLINE;
 	airspeed->valueOffset		= offsetof(MODEL, vel.horizontal);
 
 	PTAPE heading				= allocHeadingTape();
 	initRect(&heading->hdr.rect, 30, 238, 300, 20);
-	heading->hdr.flags			= RF_ALIGN_BOTTOM;
+	heading->hdr.flags			= RF_ALIGN_BOTTOM | RF_OUTLINE;
 
 	PARROW arrow				= allocArrow();
 	initRect(&arrow->hdr.rect, 300, 50, 10, 20);
@@ -167,9 +168,11 @@ void initRenderers()
 
 	PINDICATOR battery			= allocBatteryMeter();
 	initRect(&battery->hdr.rect, 30, 20, 25, 12);
+	initRect(&battery->rect2, 56, 22, 40, 12);
 	battery->hdr.flags			= RF_ALIGN_RIGHT | RF_CAPTION | RF_OUTLINE;
 	battery->range.min			= 9.0f;
 	battery->range.max			= 12.6f;
+	battery->range.cnt			= 4;
 	battery->range.segments		= segs;
 	battery->format				= "%.1fV";
 
@@ -183,10 +186,12 @@ void initRenderers()
 
 	PINDICATOR current			= allocBarMeter();
 	initRect(&current->hdr.rect, 30, 34, 25, 12);
+	initRect(&current->rect2, 56, 36, 40, 12);
 	current->hdr.flags			= RF_ALIGN_LEFT | RF_CAPTION | RF_OUTLINE;
 	current->valueOffset		= offsetof(MODEL, elec.current);
 	current->range.min			= 0.0f;
 	current->range.max			= 60.0f;
+	current->range.cnt			= 3;
 	current->range.segments		= segs;
 	current->format				= "%.1fA";
 
