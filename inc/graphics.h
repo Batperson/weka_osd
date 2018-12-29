@@ -65,6 +65,7 @@ typedef struct
 	u8 	charheight;
 	u8 	bytesPerLine;
 	u8  asciiOffset;
+	u8  padding;
 	u8* data;
 } FONT, *PFONT;
 

@@ -34,9 +34,9 @@ void initRect(PRECT rc, DU left, DU top, DU width, DU height)
 void inflateRect(PRECT rc, DU width, DU height)
 {
 	rc->left	-= width;
-	rc->width	+= width;
+	rc->width	+= (width * 2);
 	rc->top		-= height;
-	rc->height	+= height;
+	rc->height	+= (height * 2);
 }
 
 void offsetRect(PRECT rc, DU left, DU top)
@@ -372,7 +372,11 @@ void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
 	COLOUR fg 	= (flags & Inverse) ? background : foreground;
 	COLOUR bg 	= (flags & Inverse) ? foreground : background;
 	u32 bbrsh 	= bg | bg << 8 | bg << 16 | bg << 24;
-	u32 defmask	= (flags & Inverse) ? 0xffffffff : 0x00;
+	u32 defmask	= (flags & Fill) ? 0xffffffff : 0x00;
+	u8 padl		= (font->padding & 0x03);
+	u8 padt		= (font->padding & 0x0C) >> 2;
+	u8 padr		= (font->padding & 0x30) >> 4;
+	u8 padb		= (font->padding & 0xC0) >> 6;
 
 	while(*sz)
 	{

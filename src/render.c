@@ -50,23 +50,20 @@ void renderBarFill(PRECT rc, PSEGMENT seg, float scale, RenderFlagsType flags)
 {
 	COLOUR obc		= selectBackColour(seg->colour);
 
-	RECT r = { rc->left, rc->top };
 	if(flags & RF_VERTICAL)
 	{
-		r.width		= rc->width;
-		r.height	= rc->height * scale;
-		if(r.height <= 0)
-			r.height = 1;
+		rc->height	*= scale;
+		if(rc->height < 1)
+			rc->height = 1;
 	}
 	else
 	{
-		r.height	= rc->height;
-		r.width		= rc->width * scale;
-		if(r.width <= 0)
-			r.width = 1;
+		rc->width *= scale;
+		if(rc->width < 1)
+			rc->width = 1;
 	}
 
-	drawRect(&r, Fill);
+	drawRect(rc, Fill);
 
 	selectBackColour(obc);
 }
@@ -95,14 +92,22 @@ void renderBarMeter(PRENDERER r)
 	else if(scale <= 0)
 		scale = 0;
 
-	PSEGMENT seg	= getSegment(&pi->range, value);
+	RECT rc			= { r->rect.left, r->rect.top, r->rect.width, r->rect.height };
 
 	COLOUR ofc		= selectForeColour(r->colour);
 
-	RECT rc			= { r->rect.left + 2, r->rect.top + 2, r->rect.width - 4, r->rect.height - 4 };
+	if(r->flags & RF_OUTLINE)
+	{
+		drawRect(&rc, Outline | Inverse);
+		inflateRect(&rc, -1, -1);
+	}
 
-	drawRect(&r->rect, Outline);
+	drawRect(&rc, Outline);
 
+	PSEGMENT seg	= getSegment(&pi->range, value);
+
+	selectForeColour(r->colour);
+	inflateRect(&rc, -1, -1);
 	renderBarFill(&rc, seg, scale, r->flags);
 
 	if(r->flags & RF_CAPTION)
@@ -235,7 +240,9 @@ void renderArtificialHorizon(PRENDERER r)
 		int cnt = (divs >= LINE_RENDER_BATCH) ? LINE_RENDER_BATCH : divs;
 		for(int i=0; i<cnt; i++)
 		{
-			int rungIncr = (currentUnit > 0) ? -pa->pitchLadderDirectionHeight : pa->pitchLadderDirectionHeight;
+			int incr = (currentUnit > 0) ? -1 : 1;
+			int rungIncr = incr * pa->pitchLadderDirectionHeight;
+
 			if(currentUnit == 0)
 			{
 				lines[lcnt].p1.x 	= ctr.x - pa->centreClearance - pa->horizonLineWidth;
@@ -249,6 +256,31 @@ void renderArtificialHorizon(PRENDERER r)
 			}
 			else
 			{
+				if(pa->hdr.flags & RF_CAPTION)
+				{
+					char sz[6];
+					RECT rc;
+
+					snprintf(sz, sizeof(sz), "%d", abs(currentUnit));
+
+					int captionIncr = incr * (pa->pitchLadderDirectionHeight + pa->font->charheight);
+
+					POINT pts[2]	= { { ctr.x - pa->centreClearance, currentPos + captionIncr }, { ctr.x + pa->centreClearance, currentPos  + captionIncr } };
+					rotatePts(pts, 2, &ctr, rollValue);
+
+					rc.width 	= pa->font->charwidth * 2;
+					rc.height	= pa->font->charheight;
+					rc.left		= pts[0].x;
+					rc.top		= pts[0].y;
+
+					DrawFlags flags = (pa->hdr.flags & RF_OUTLINE);
+					drawText(&rc, pa->font, flags, sz);
+
+					rc.left		= pts[1].x;
+					rc.top		= pts[1].y;
+					drawText(&rc, pa->font, flags, sz);
+				}
+
 				lines[lcnt].p1.x 	= ctr.x - pa->centreClearance - pa->pitchLadderWidth;
 				lines[lcnt].p1.y 	= currentPos;
 				lines[lcnt].p2.x 	= ctr.x - pa->centreClearance;
@@ -272,7 +304,7 @@ void renderArtificialHorizon(PRENDERER r)
 		}
 
 		rotatePts((PPOINT)lines, lcnt << 1, &ctr, rollValue);
-		drawLines(lines, lcnt, None, &pa->hdr.rect);
+		drawLines(lines, lcnt, pa->hdr.flags & RF_OUTLINE, &pa->hdr.rect);
 
 		divs -= cnt;
 	}

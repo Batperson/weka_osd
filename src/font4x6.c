@@ -27,4 +27,4 @@ u8 tinyFontData[] IN_RAM =
 	0xE0, 0xA0, 0xE0, 0x20, 0xE0, 0x00 		// 0x39 '9'
 };
 
-FONT tinyFont IN_RAM = { 4, 6, 1, 45, tinyFontData };
+FONT tinyFont IN_RAM = { 4, 6, 1, 45, 1, tinyFontData };

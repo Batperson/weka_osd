@@ -14,7 +14,7 @@ typedef enum {
 	RF_HORIZONTAL						= 0x00,
 	RF_ALIGN_RIGHT						= 0x01,
 	RF_ALIGN_BOTTOM						= 0x02,
-	RF_INVERSE							= 0x40,
+	RF_INVERSE							= 0x60,
 	RF_OUTLINE							= 0x80,
 
 	RF_CAPTION							= 0x100,

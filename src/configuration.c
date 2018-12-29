@@ -109,6 +109,7 @@ PINDICATOR allocBatteryMeter()
 PAHI allocArtificialHorizon()
 {
 	PAHI ahi						= (PAHI)allocRenderer(sizeof(AHI));
+	ahi->hdr.flags					= RF_OUTLINE | RF_CAPTION;
 	ahi->hdr.renderProc				= (RENDERPROC)&renderArtificialHorizon;
 	ahi->pitchValueOffset			= offsetof(MODEL, att.pitch);
 	ahi->rollValueOffset			= offsetof(MODEL, att.roll);
@@ -118,6 +119,7 @@ PAHI allocArtificialHorizon()
 	ahi->pitchLadderDirectionHeight	= 5;
 	ahi->horizonLineWidth			= 80;
 	ahi->centreClearance			= 20;
+	ahi->font						= &tinyFont;
 
 	return ahi;
 }
