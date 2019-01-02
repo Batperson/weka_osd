@@ -1,5 +1,6 @@
 /*
  * control.c
+ * High-level hardware control
  *
  */
 
@@ -70,6 +71,9 @@ void initUserButtons()
 
 void initVideoChips()
 {
+	/* Give the chips a chance to fully power up */
+	sleep(400);
+
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x00, 0x00);	// Autodetect, CVBS PAL/NTSC/SECAM on AIN1
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x17, 0x41);	// Shaping filter control 1, 1 undocumented setting
 	I2C_WriteByte(I2C1, ADDR_DECODER, 0x1D, 0x47);	// Enable 28MHz Crystal

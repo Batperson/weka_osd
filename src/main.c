@@ -40,7 +40,6 @@ void initDebug()
 }
 
 char szBtn0Msg[20];
-char szBtn1Msg[20];
 
 int main(void)
 {
@@ -63,26 +62,21 @@ int main(void)
 
   printf("Initializing hardware...\n");
 
-  /* Give the chips a chance to fully power up */
-  sleep(400);
-
-  initModel();
+  initSystem();
   initLeds();
+  initModel();
   initUserButtons();
   initI2C1();
   initVideoChips();
-  initSystem();
   initRenderers();
   initVideo();
 
   //setLowPowerMode(LowPowerDAC1);
 
   sprintf(szBtn0Msg, "TEST0");
-  sprintf(szBtn1Msg, "TEST1");
 
   while (1)
   {
-
   }
 }
 

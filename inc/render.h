@@ -25,11 +25,11 @@ typedef enum {
 
 } RenderFlagsType;
 
-struct RENDERER;
+typedef struct RENDERER *PRENDERER;
 
-typedef void (*RENDERPROC)(struct RENDERER* r);
+typedef void (*RENDERPROC)(PRENDERER r);
 
-typedef struct
+typedef struct RENDERER
 {
 	u16 size;
 	u16 flags;

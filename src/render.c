@@ -605,7 +605,7 @@ void INTERRUPT PendSV_Handler()
 		if((rf & RF_HIDDEN) || ((rf & RF_BLINK) &&  blinkOn()))
 			continue;
 
-		r->renderProc((struct RENDERER*)r);
+		r->renderProc(r);
 	}
 
 	// Output cycle count for profiling

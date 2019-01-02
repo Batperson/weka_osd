@@ -326,28 +326,6 @@ void INTERRUPT DMA2_Stream1_IRQHandler()
 	}
 }
 
-void INTERRUPT EXTI3_IRQHandler()
-{
-	// Clear EXTI 3 (Interrupt in decoder is self-clearing)
-	EXTI_ClearITPendingBit(EXTI_Line3);
-
-	Status1Type s1 = getDecoderStatus1();
-	Status3Type s3 = getDecoderStatus3();
-
-	setInterruptClear(Interrupt1All, Interrupt3All);
-
-	printf("Status change. S1=%d, S3=%d\n", s1, s3);
-
-	if(s3 & FREE_RUN_ACT)
-	{
-		setFastBlankMode(FBModeStatic);
-	}
-	else
-	{
-		setFastBlankMode(FBModeDynamicEdgeEnhanced);
-	}
-}
-
 void initVideo()
 {
 	// Clear the buffers
