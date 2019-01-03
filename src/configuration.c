@@ -9,6 +9,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "stdio.h"
+#include "float.h"
 #include "math.h"
 #include "misc.h"
 #include "system.h"
@@ -25,6 +26,7 @@ extern RENDERPROC renderArtificialHorizon;
 extern RENDERPROC renderBatteryMeter;
 extern RENDERPROC renderBarMeter;
 extern RENDERPROC renderLabel;
+extern RENDERPROC renderSlider;
 
 extern FONT systemFont;
 extern FONT tinyFont;
@@ -50,11 +52,13 @@ PSEGMENT allocSegments(int cnt)
 	return segs;
 }
 
-PTAPE allocTape()
+PSCALE allocTape()
 {
-	PTAPE tape						= (PTAPE)allocRenderer(sizeof(TAPE));
+	PSCALE tape						= (PSCALE)allocRenderer(sizeof(PSCALE));
 	tape->hdr.renderProc			= (RENDERPROC)&renderTape;
 	tape->valueOffset				= offsetof(MODEL, vel.horizontal);
+	tape->minValue					= -FLT_MAX;
+	tape->maxValue					= FLT_MAX;
 	tape->unitsPerDivision			= 1;
 	tape->pixelsPerDivision			= 20;
 	tape->majorDivisionIntervals	= 5;
@@ -65,14 +69,31 @@ PTAPE allocTape()
 	return tape;
 }
 
-PTAPE allocHeadingTape()
+PSCALE allocHeadingTape()
 {
-	PTAPE tape						= allocTape();
+	PSCALE tape						= allocTape();
 	tape->hdr.renderProc			= (RENDERPROC)&renderHeadingTape;
 	tape->unitsPerDivision			= 2;
 	tape->valueOffset				= offsetof(MODEL, att.heading);
 
 	return tape;
+}
+
+PSCALE allocSlider()
+{
+	PSCALE slider					= (PSCALE)allocRenderer(sizeof(PSCALE));
+	slider->hdr.renderProc			= (RENDERPROC)&renderSlider;
+	slider->valueOffset				= offsetof(MODEL, vel.vertical);
+	slider->minValue				= -5;
+	slider->maxValue				= 5;
+	slider->unitsPerDivision		= 1;
+	slider->pixelsPerDivision		= 6;
+	slider->majorDivisionIntervals	= 2;
+	slider->majorDivisionWidth		= 4;
+	slider->minorDivisionWidth		= 2;
+	slider->font					= &tinyFont;
+
+	return slider;
 }
 
 PARROW allocArrow()
@@ -138,17 +159,17 @@ void initRenderers()
 	int rendererLength = 8;
 	renderers 					= (PRENDERER*)malloc(sizeof(void*) * (rendererLength + 1));
 
-	PTAPE altitude				= allocTape();
+	PSCALE altitude				= allocTape();
 	initRect(&altitude->hdr.rect, 338, 0, 20, 288);
 	altitude->hdr.flags			= RF_ALIGN_RIGHT | RF_OUTLINE;
 	altitude->valueOffset		= offsetof(MODEL, loc.altitude);
 
-	PTAPE airspeed				= allocTape();
+	PSCALE airspeed				= allocTape();
 	initRect(&airspeed->hdr.rect, 1, 0, 20, 288);
 	airspeed->hdr.flags			= RF_ALIGN_LEFT | RF_OUTLINE;
 	airspeed->valueOffset		= offsetof(MODEL, vel.horizontal);
 
-	PTAPE heading				= allocHeadingTape();
+	PSCALE heading				= allocHeadingTape();
 	initRect(&heading->hdr.rect, 30, 238, 300, 20);
 	heading->hdr.flags			= RF_ALIGN_BOTTOM | RF_OUTLINE;
 

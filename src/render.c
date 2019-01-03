@@ -346,7 +346,7 @@ void renderHeadingTape(PRENDERER r)
 
 	RECT rc;
 
-	PTAPE pt 		= (PTAPE)r;
+	PSCALE pt 		= (PSCALE)r;
 	DrawFlags df	= pt->hdr.flags & (RF_ALIGN_BOTTOM | RF_OUTLINE);
 	COLOUR ofc		= selectForeColour(pt->hdr.colour);
 
@@ -481,7 +481,7 @@ void renderHeadingTape(PRENDERER r)
 
 void renderTape(PRENDERER r)
 {
-	PTAPE pt = (PTAPE)r;
+	PSCALE pt = (PSCALE)r;
 
 	char sz[6];
 	LINE lines[LINE_RENDER_BATCH];
@@ -491,6 +491,7 @@ void renderTape(PRENDERER r)
 	DrawFlags df	= pt->hdr.flags & (RF_ALIGN_RIGHT | RF_OUTLINE);
 
 	float value		= DEREFERENCE_OFFSET_FLOAT(pt->valueOffset);
+	if(value < pt->minValue) value = pt->minValue; else if(value > pt->maxValue) value = pt->maxValue;
 
 	int vquot;
 	int divs		= pt->hdr.rect.height / pt->pixelsPerDivision;
@@ -588,6 +589,11 @@ void renderTape(PRENDERER r)
 	drawText(&rc, pt->font, df, sz);
 
 	selectForeColour(ofc);
+}
+
+void renderSlider(PRENDERER r)
+{
+	PSCALE ps = (PSCALE)r;
 }
 
 void INTERRUPT PendSV_Handler()

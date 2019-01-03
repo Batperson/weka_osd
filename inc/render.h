@@ -62,13 +62,15 @@ typedef struct
 {
 	RENDERER hdr;
 	u16 valueOffset;
+	float minValue;
+	float maxValue;
 	u8 unitsPerDivision;
 	u8 pixelsPerDivision;
 	u8 majorDivisionIntervals;
 	u8 majorDivisionWidth;
 	u8 minorDivisionWidth;
 	PFONT font;
-} TAPE, *PTAPE;
+} SCALE, *PSCALE;
 
 typedef struct
 {
