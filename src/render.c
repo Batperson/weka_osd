@@ -406,20 +406,20 @@ void renderHeadingTape(PRENDERER r)
 				switch(currentUnit)
 				{
 				case 0:
-					sprintf(sz, "N");
+					snprintf(sz, sizeof(sz), "N");
 					break;
 				case 90:
-					sprintf(sz, "E");
+					snprintf(sz, sizeof(sz), "E");
 					break;
 				case 180:
-					sprintf(sz, "S");
+					snprintf(sz, sizeof(sz), "S");
 					break;
 				case -90:
 				case 270:
-					sprintf(sz, "W");
+					snprintf(sz, sizeof(sz), "W");
 					break;
 				default:
-					sprintf(sz, "%d", currentUnit);
+					snprintf(sz, sizeof(sz), "%d", currentUnit);
 					break;
 				}
 
@@ -469,7 +469,7 @@ void renderHeadingTape(PRENDERER r)
 
 	drawRect(&rc, Fill | Outline);
 
-	sprintf(sz, "%d", (int)truncf(value));
+	snprintf(sz, sizeof(sz), "%d", (int)truncf(value));
 
 	rc.left = midPoint - (((strlen(sz) * pt->font->charwidth) >> 1)-1);
 	rc.top += 2;
@@ -556,7 +556,7 @@ void renderTape(PRENDERER r)
 					rc.height -= disc;
 				}
 
-				sprintf(sz, "%d", currentUnit);
+				snprintf(sz, sizeof(sz), "%d", currentUnit);
 
 				drawText(&rc, pt->font, df | df2, sz);
 			}
@@ -584,16 +584,96 @@ void renderTape(PRENDERER r)
 	rc.left += (pt->hdr.flags & RF_ALIGN_RIGHT) ? 1 : arrowHeight >> 1;
 	rc.width -= arrowHeight >> 1;
 
-	sprintf(sz, "%d", (int)truncf(value));
+	snprintf(sz, sizeof(sz), "%d", (int)truncf(value));
 
 	drawText(&rc, pt->font, df, sz);
 
 	selectForeColour(ofc);
 }
 
-void renderSlider(PRENDERER r)
+void renderVerticalSlider(PRENDERER r)
 {
 	PSCALE ps = (PSCALE)r;
+	DU divs				= ps->maxValue - ps->minValue;
+	DU pixelsPerDiv 	= ps->hdr.rect.height / divs;
+	DU minDivLeft;
+	DU majDivLeft;
+	DrawFlags df		= ps->hdr.flags & RF_OUTLINE;
+
+	COLOUR ofc			= selectForeColour(ps->hdr.colour);
+
+	LINE lines[LINE_RENDER_BATCH];
+	lines[0].p1.y		= ps->hdr.rect.top;
+	lines[0].p2.y		= ps->hdr.rect.top + ps->hdr.rect.top + (divs * pixelsPerDiv);
+
+	char sz[6];
+
+	if(ps->hdr.flags & RF_ALIGN_RIGHT)
+	{
+		minDivLeft		= majDivLeft		= ps->hdr.rect.left;
+		lines[0].p1.x	= lines[0].p2.x		= ps->hdr.rect.left;
+	}
+	else
+	{
+		minDivLeft		= (ps->hdr.rect.left + ps->hdr.rect.width) - ps->minorDivisionWidth;
+		majDivLeft		= (ps->hdr.rect.left + ps->hdr.rect.width) - ps->majorDivisionWidth;
+		lines[0].p1.x	= lines[0].p2.x		= ps->hdr.rect.left + ps->hdr.rect.width;
+	}
+
+	drawLine(&lines[0], df, NULL);
+
+	int curLine			= 0;
+	int curValue		= ps->maxValue;
+	int majorUnit		= ps->unitsPerDivision * ps->majorDivisionIntervals;
+	DU curY				= ps->hdr.rect.top;
+
+	for(int i=0; i<divs; i++)
+	{
+		lines[curLine].p1.y	= lines[curLine].p2.y		= curY;
+
+		if(curValue % majorUnit == 0)
+		{
+			lines[curLine].p1.x	= majDivLeft;
+			lines[curLine].p2.x	= majDivLeft + ps->majorDivisionWidth;
+		}
+		else
+		{
+			lines[curLine].p1.x	= minDivLeft;
+			lines[curLine].p2.x	= minDivLeft + ps->minorDivisionWidth;
+
+			RECT rc;
+			rc.left		= (ps->hdr.flags & RF_ALIGN_RIGHT) ? ps->hdr.rect.left + ps->majorDivisionWidth + 2 : ps->hdr.rect.left;
+			rc.top		= curY - (ps->font->charheight >> 1);
+			rc.width	= ps->hdr.rect.width - (ps->minorDivisionWidth + 2);
+			rc.height	= ps->font->charheight;
+
+			snprintf(sz, sizeof(sz), "%d", curValue);
+
+			drawText(&rc, ps->font, df, sz);
+		}
+
+		curY		+= pixelsPerDiv;
+		curValue	+= ps->unitsPerDivision;
+
+		if(++curLine == LINE_RENDER_BATCH || i == divs-1)
+		{
+			drawLines(lines, curLine, df, NULL);
+
+			curLine = 0;
+		}
+	}
+
+	float value		= DEREFERENCE_OFFSET_FLOAT(ps->valueOffset);
+	if(value < ps->minValue) value = ps->minValue; else if(value > ps->maxValue) value = ps->maxValue;
+
+	RECT rc;
+	rc.left		= (ps->hdr.flags & RF_ALIGN_RIGHT) ? ps->hdr.rect.left - 2 : ps->hdr.rect.left + ps->hdr.rect.width;
+	rc.top		= ps->hdr.rect.top + (int)truncf(((value - ps->minValue) / (float)ps->unitsPerDivision) * (float)ps->pixelsPerDivision);
+	rc.width 	= rc.height		= 5;
+
+	drawArrow(&rc, (ps->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );
+
+	selectForeColour(ofc);
 }
 
 void INTERRUPT PendSV_Handler()

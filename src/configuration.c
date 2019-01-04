@@ -26,7 +26,7 @@ extern RENDERPROC renderArtificialHorizon;
 extern RENDERPROC renderBatteryMeter;
 extern RENDERPROC renderBarMeter;
 extern RENDERPROC renderLabel;
-extern RENDERPROC renderSlider;
+extern RENDERPROC renderVerticalSlider;
 
 extern FONT systemFont;
 extern FONT tinyFont;
@@ -82,7 +82,7 @@ PSCALE allocHeadingTape()
 PSCALE allocSlider()
 {
 	PSCALE slider					= (PSCALE)allocRenderer(sizeof(PSCALE));
-	slider->hdr.renderProc			= (RENDERPROC)&renderSlider;
+	slider->hdr.renderProc			= (RENDERPROC)&renderVerticalSlider;
 	slider->valueOffset				= offsetof(MODEL, vel.vertical);
 	slider->minValue				= -5;
 	slider->maxValue				= 5;
@@ -156,7 +156,7 @@ PLABEL allocLabel()
 
 void initRenderers()
 {
-	int rendererLength = 8;
+	int rendererLength = 10;
 	renderers 					= (PRENDERER*)malloc(sizeof(void*) * (rendererLength + 1));
 
 	PSCALE altitude				= allocTape();
@@ -224,6 +224,10 @@ void initRenderers()
 	status->hdr.flags			= RF_INVERSE | RF_BLINK;
 	status->text				= "ARMED";
 
+	PSCALE vario				= allocSlider();
+	initRect(&vario->hdr.rect, 310, 130, 20, 100);
+	vario->hdr.flags			= RF_ALIGN_RIGHT;
+
 	renderers[0]				= &ahi->hdr;
 	renderers[1]				= &altitude->hdr;
 	renderers[2]				= &airspeed->hdr;
@@ -232,5 +236,6 @@ void initRenderers()
 	renderers[5]				= &battery->hdr;
 	renderers[6]				= &current->hdr;
 	renderers[7]				= &status->hdr;
-	renderers[8]				= NULL;
+	renderers[8]				= &vario->hdr;
+	renderers[9]				= NULL;
 }

@@ -27,10 +27,10 @@ void demoModelUpdate()
 	float val2 = inc / 20;
 
 	model.att.heading		= ((cosf(val1) * -60)/4) + 90;
-	model.att.homeVector	+= 2; // = ((cosf(val1) * 60)/4) + 45;
+	model.att.homeVector	+= 2;
 	model.att.roll 			= (sinf(val1) * 60);
 	model.loc.altitude 		= (sinf(val2) * 40) + 50;
-	model.vel.vertical		= (cosf(val2) * 10);
+	model.vel.vertical		= (cosf(val2) * 5);
 	model.vel.horizontal	= (cosf(val2) * 10) + 20;
 	model.elec.voltage		= (sinf(val2) * 1.8) + 10.8;
 	model.elec.current		= (sinf(val1) * 20) + 40;
