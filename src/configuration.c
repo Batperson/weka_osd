@@ -26,6 +26,7 @@ extern RENDERPROC renderArtificialHorizon;
 extern RENDERPROC renderBatteryMeter;
 extern RENDERPROC renderBarMeter;
 extern RENDERPROC renderLabel;
+extern RENDERPROC renderDynLabel;
 extern RENDERPROC renderVerticalSlider;
 
 extern FONT systemFont;
@@ -54,7 +55,7 @@ PSEGMENT allocSegments(int cnt)
 
 PSCALE allocTape()
 {
-	PSCALE tape						= (PSCALE)allocRenderer(sizeof(PSCALE));
+	PSCALE tape						= (PSCALE)allocRenderer(sizeof(SCALE));
 	tape->hdr.renderProc			= (RENDERPROC)&renderTape;
 	tape->valueOffset				= offsetof(MODEL, vel.horizontal);
 	tape->minValue					= -FLT_MAX;
@@ -81,7 +82,7 @@ PSCALE allocHeadingTape()
 
 PSCALE allocSlider()
 {
-	PSCALE slider					= (PSCALE)allocRenderer(sizeof(PSCALE));
+	PSCALE slider					= (PSCALE)allocRenderer(sizeof(SCALE));
 	slider->hdr.renderProc			= (RENDERPROC)&renderVerticalSlider;
 	slider->valueOffset				= offsetof(MODEL, vel.vertical);
 	slider->minValue				= -5;
@@ -150,6 +151,18 @@ PLABEL allocLabel()
 	PLABEL label					= (PLABEL)allocRenderer(sizeof(LABEL));
 	label->hdr.renderProc			= (RENDERPROC)&renderLabel;
 	label->font						= &systemFont;
+	label->text						= NULL;
+
+	return label;
+}
+
+PDYNLABEL allocDynLabel()
+{
+	PDYNLABEL label					= (PDYNLABEL)allocRenderer(sizeof(DYNLABEL));
+	label->hdr.renderProc			= (RENDERPROC)&renderDynLabel;
+	label->font						= &systemFont;
+	label->format					= "%.1f";
+	label->valueOffset				= 0;
 
 	return label;
 }
@@ -225,17 +238,24 @@ void initRenderers()
 	status->text				= "ARMED";
 
 	PSCALE vario				= allocSlider();
-	initRect(&vario->hdr.rect, 310, 130, 20, 100);
+	initRect(&vario->hdr.rect, 300, 130, 20, 100);
 	vario->hdr.flags			= RF_ALIGN_RIGHT;
 
-	renderers[0]				= &ahi->hdr;
-	renderers[1]				= &altitude->hdr;
-	renderers[2]				= &airspeed->hdr;
-	renderers[3]				= &heading->hdr;
-	renderers[4]				= &arrow->hdr;
-	renderers[5]				= &battery->hdr;
-	renderers[6]				= &current->hdr;
-	renderers[7]				= &status->hdr;
-	renderers[8]				= &vario->hdr;
-	renderers[9]				= NULL;
+	PDYNLABEL varioVal			= allocDynLabel();
+	initRect(&varioVal->hdr.rect, 315, 221, 30, 20);
+	varioVal->hdr.flags			= RF_OUTLINE;
+	varioVal->format			= "%.1f";
+	varioVal->valueOffset		= offsetof(MODEL, vel.vertical);
+
+	renderers[0]				= (PRENDERER)ahi;
+	renderers[1]				= (PRENDERER)altitude;
+	renderers[2]				= (PRENDERER)airspeed;
+	renderers[3]				= (PRENDERER)heading;
+	renderers[4]				= (PRENDERER)arrow;
+	renderers[5]				= (PRENDERER)battery;
+	renderers[6]				= (PRENDERER)current;
+	renderers[7]				= (PRENDERER)status;
+	renderers[8]				= (PRENDERER)vario;
+	renderers[9]				= (PRENDERER)varioVal;
+	renderers[10]				= NULL;
 }

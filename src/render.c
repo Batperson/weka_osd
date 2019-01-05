@@ -81,6 +81,23 @@ void renderLabel(PRENDERER r)
 	selectForeColour(ofc);
 }
 
+void renderDynLabel(PRENDERER r)
+{
+	PDYNLABEL pl = (PDYNLABEL)r;
+	COLOUR ofc		= selectForeColour(r->colour);
+
+	if(pl->format)
+	{
+		char sz[20];
+		float value 	= DEREFERENCE_OFFSET_FLOAT(pl->valueOffset);
+
+		snprintf(sz, sizeof(sz), pl->format, value);
+		drawText(&pl->hdr.rect, pl->font, pl->hdr.flags & (RF_ALIGN_TOP | RF_ALIGN_RIGHT | RF_INVERSE | RF_OUTLINE), sz);
+	}
+
+	selectForeColour(ofc);
+}
+
 void renderBarMeter(PRENDERER r)
 {
 	PINDICATOR pi = (PINDICATOR)r;
@@ -604,9 +621,11 @@ void renderVerticalSlider(PRENDERER r)
 
 	LINE lines[LINE_RENDER_BATCH];
 	lines[0].p1.y		= ps->hdr.rect.top;
-	lines[0].p2.y		= ps->hdr.rect.top + ps->hdr.rect.top + (divs * pixelsPerDiv);
+	lines[0].p2.y		= ps->hdr.rect.top + (divs * pixelsPerDiv);
 
 	char sz[6];
+
+	RECT rc;
 
 	if(ps->hdr.flags & RF_ALIGN_RIGHT)
 	{
@@ -627,7 +646,7 @@ void renderVerticalSlider(PRENDERER r)
 	int majorUnit		= ps->unitsPerDivision * ps->majorDivisionIntervals;
 	DU curY				= ps->hdr.rect.top;
 
-	for(int i=0; i<divs; i++)
+	for(int i=0; i<=divs; i++)
 	{
 		lines[curLine].p1.y	= lines[curLine].p2.y		= curY;
 
@@ -635,13 +654,7 @@ void renderVerticalSlider(PRENDERER r)
 		{
 			lines[curLine].p1.x	= majDivLeft;
 			lines[curLine].p2.x	= majDivLeft + ps->majorDivisionWidth;
-		}
-		else
-		{
-			lines[curLine].p1.x	= minDivLeft;
-			lines[curLine].p2.x	= minDivLeft + ps->minorDivisionWidth;
 
-			RECT rc;
 			rc.left		= (ps->hdr.flags & RF_ALIGN_RIGHT) ? ps->hdr.rect.left + ps->majorDivisionWidth + 2 : ps->hdr.rect.left;
 			rc.top		= curY - (ps->font->charheight >> 1);
 			rc.width	= ps->hdr.rect.width - (ps->minorDivisionWidth + 2);
@@ -651,11 +664,16 @@ void renderVerticalSlider(PRENDERER r)
 
 			drawText(&rc, ps->font, df, sz);
 		}
+		else
+		{
+			lines[curLine].p1.x	= minDivLeft;
+			lines[curLine].p2.x	= minDivLeft + ps->minorDivisionWidth;
+		}
 
 		curY		+= pixelsPerDiv;
-		curValue	+= ps->unitsPerDivision;
+		curValue	-= ps->unitsPerDivision;
 
-		if(++curLine == LINE_RENDER_BATCH || i == divs-1)
+		if(++curLine == LINE_RENDER_BATCH || i == divs)
 		{
 			drawLines(lines, curLine, df, NULL);
 
@@ -666,9 +684,10 @@ void renderVerticalSlider(PRENDERER r)
 	float value		= DEREFERENCE_OFFSET_FLOAT(ps->valueOffset);
 	if(value < ps->minValue) value = ps->minValue; else if(value > ps->maxValue) value = ps->maxValue;
 
-	RECT rc;
+	DU offset	= truncf(((ps->maxValue - value) / (float)ps->unitsPerDivision) * (float)ps->pixelsPerDivision);
+
 	rc.left		= (ps->hdr.flags & RF_ALIGN_RIGHT) ? ps->hdr.rect.left - 2 : ps->hdr.rect.left + ps->hdr.rect.width;
-	rc.top		= ps->hdr.rect.top + (int)truncf(((value - ps->minValue) / (float)ps->unitsPerDivision) * (float)ps->pixelsPerDivision);
+	rc.top		= ps->hdr.rect.top + offset;
 	rc.width 	= rc.height		= 5;
 
 	drawArrow(&rc, (ps->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );

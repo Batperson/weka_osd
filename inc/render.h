@@ -103,6 +103,14 @@ typedef struct
 	char* text;
 } LABEL, *PLABEL;
 
+typedef struct
+{
+	RENDERER hdr;
+	PFONT font;
+	char* format;
+	u16 valueOffset;
+} DYNLABEL, *PDYNLABEL;
+
 extern PRENDERER* renderers;
 
 #endif /* RENDER_H_ */
