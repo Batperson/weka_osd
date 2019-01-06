@@ -124,16 +124,8 @@ void renderBarMeter(PRENDERER r)
 	PSEGMENT seg	= getSegment(&pi->range, value);
 
 	selectForeColour(r->colour);
-	inflateRect(&rc, -1, -1);
+	inflateRect(&rc, -2, -2);
 	renderBarFill(&rc, seg, scale, r->flags);
-
-	if(r->flags & RF_CAPTION)
-	{
-		char sz[8];
-		snprintf(sz, sizeof(sz), pi->format, value);
-
-		drawText(&pi->rect2, pi->font, r->flags & RF_OUTLINE, sz);
-	}
 
 	selectForeColour(ofc);
 }
@@ -211,17 +203,16 @@ void renderBatteryMeter(PRENDERER r)
 		rc.width	= r->rect.width - 4;
 	}
 
+	if(r->flags & RF_OUTLINE)
+	{
+		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), Inverse, NULL);
+		inflatePoints(pt, sizeof(pt) / sizeof(POINT), -1, -1);
+		inflateRect(&rc, -1, -1);
+	}
+
 	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
 
 	renderBarFill(&rc, seg, scale, r->flags);
-
-	if(r->flags & RF_CAPTION)
-	{
-		char sz[8];
-		snprintf(sz, sizeof(sz), pi->format, value);
-
-		drawText(&pi->rect2, pi->font, r->flags & RF_OUTLINE, sz);
-	}
 
 	selectForeColour(ofc);
 }
@@ -684,10 +675,10 @@ void renderVerticalSlider(PRENDERER r)
 	float value		= DEREFERENCE_OFFSET_FLOAT(ps->valueOffset);
 	if(value < ps->minValue) value = ps->minValue; else if(value > ps->maxValue) value = ps->maxValue;
 
-	DU offset	= truncf(((ps->maxValue - value) / (float)ps->unitsPerDivision) * (float)ps->pixelsPerDivision);
+	DU offset	= truncf(((ps->maxValue - value) / (float)ps->unitsPerDivision) * (float)pixelsPerDiv);
 
 	rc.left		= (ps->hdr.flags & RF_ALIGN_RIGHT) ? ps->hdr.rect.left - 2 : ps->hdr.rect.left + ps->hdr.rect.width;
-	rc.top		= ps->hdr.rect.top + offset;
+	rc.top		= (ps->hdr.rect.top + offset) - 2;
 	rc.width 	= rc.height		= 5;
 
 	drawArrow(&rc, (ps->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );

@@ -13,21 +13,21 @@
 /*
   Pin and peripheral Usage:
 
-  PA0			HSYNC input (pixel start)
-  PA1			VSYNC input
-  PA2			FIELD input
-  PA3			INT input
-  PA5			HSYNC input (line count)
+  PA0				HSYNC input (pixel start)
+  PA1				VSYNC input
+  PA2				FIELD input
+  PA3				INT input
+  PA5				HSYNC input (line count)
 
-  PB8-9			I2C SCL and SDA output
+  PB8-9				I2C SCL and SDA output
 
-  PC13			User button
+  PC13				User button
 
-  PF0-7			Pixel bus output
-  PF9-10		LEDs, active low
+  PF0-7				Pixel bus output
+  PB0, PB7, PB14	LEDs
 
-  TIM2			Video line counter
-  TIM8			Pixel clock for DMA
+  TIM2				Video line counter
+  TIM8				Pixel clock for DMA
 */
 
 

@@ -114,7 +114,6 @@ PINDICATOR allocBarMeter()
 	indicator->range.segments		= NULL;
 	indicator->range.min			= 0;
 	indicator->range.max			= 0;
-	indicator->font					= &systemFont;
 
 	return indicator;
 }
@@ -169,7 +168,7 @@ PDYNLABEL allocDynLabel()
 
 void initRenderers()
 {
-	int rendererLength = 10;
+	int rendererLength = 13;
 	renderers 					= (PRENDERER*)malloc(sizeof(void*) * (rendererLength + 1));
 
 	PSCALE altitude				= allocTape();
@@ -204,13 +203,11 @@ void initRenderers()
 
 	PINDICATOR battery			= allocBatteryMeter();
 	initRect(&battery->hdr.rect, 30, 20, 25, 12);
-	initRect(&battery->rect2, 56, 22, 40, 12);
-	battery->hdr.flags			= RF_ALIGN_RIGHT | RF_CAPTION | RF_OUTLINE;
+	battery->hdr.flags			= RF_ALIGN_RIGHT | RF_OUTLINE;
 	battery->range.min			= 9.0f;
 	battery->range.max			= 12.6f;
 	battery->range.cnt			= 4;
 	battery->range.segments		= segs;
-	battery->format				= "%.1fV";
 
 	segs						= allocSegments(3);
 	segs[0].to					= 40.0;
@@ -222,14 +219,12 @@ void initRenderers()
 
 	PINDICATOR current			= allocBarMeter();
 	initRect(&current->hdr.rect, 30, 34, 25, 12);
-	initRect(&current->rect2, 56, 36, 40, 12);
-	current->hdr.flags			= RF_ALIGN_LEFT | RF_CAPTION | RF_OUTLINE;
+	current->hdr.flags			= RF_ALIGN_LEFT | RF_OUTLINE;
 	current->valueOffset		= offsetof(MODEL, elec.current);
 	current->range.min			= 0.0f;
 	current->range.max			= 60.0f;
 	current->range.cnt			= 3;
 	current->range.segments		= segs;
-	current->format				= "%.1fA";
 
 	PLABEL status				= allocLabel();
 	initRect(&status->hdr.rect, 300, 265, 60, 20);
@@ -238,14 +233,26 @@ void initRenderers()
 	status->text				= "ARMED";
 
 	PSCALE vario				= allocSlider();
-	initRect(&vario->hdr.rect, 300, 130, 20, 100);
+	initRect(&vario->hdr.rect, 300, 130, 20, 90);
 	vario->hdr.flags			= RF_ALIGN_RIGHT;
 
 	PDYNLABEL varioVal			= allocDynLabel();
-	initRect(&varioVal->hdr.rect, 315, 221, 30, 20);
-	varioVal->hdr.flags			= RF_OUTLINE;
+	initRect(&varioVal->hdr.rect, 282, 221, 30, 10);
+	varioVal->hdr.flags			= RF_OUTLINE | RF_ALIGN_RIGHT;
 	varioVal->format			= "%.1f";
 	varioVal->valueOffset		= offsetof(MODEL, vel.vertical);
+
+	PDYNLABEL batVal			= allocDynLabel();
+	initRect(&batVal->hdr.rect, 56, 22, 40, 12);
+	batVal->hdr.flags			= RF_OUTLINE;
+	batVal->format				= "%.1fV";
+	batVal->valueOffset			= offsetof(MODEL, elec.voltage);
+
+	PDYNLABEL ampVal			= allocDynLabel();
+	initRect(&ampVal->hdr.rect, 56, 36, 40, 12);
+	ampVal->hdr.flags			= RF_OUTLINE;
+	ampVal->format				= "%.1fA";
+	ampVal->valueOffset			= offsetof(MODEL, elec.current);
 
 	renderers[0]				= (PRENDERER)ahi;
 	renderers[1]				= (PRENDERER)altitude;
@@ -257,5 +264,7 @@ void initRenderers()
 	renderers[7]				= (PRENDERER)status;
 	renderers[8]				= (PRENDERER)vario;
 	renderers[9]				= (PRENDERER)varioVal;
-	renderers[10]				= NULL;
+	renderers[10]				= (PRENDERER)batVal;
+	renderers[11]				= (PRENDERER)ampVal;
+	renderers[12]				= NULL;
 }

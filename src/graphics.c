@@ -39,6 +39,31 @@ void inflateRect(PRECT rc, DU width, DU height)
 	rc->height	+= (height * 2);
 }
 
+void inflatePoints(PPOINT points, u16 cnt, DU width, DU height)
+{
+	POINT min = { points[0].x, points[0].y };
+	POINT max = { points[0].x, points[0].y };
+
+	for(u16 i=1; i<cnt; i++)
+	{
+		if(points[i].x < min.x)
+			min.x = points[i].x;
+		if(points[i].y < min.y)
+			min.y = points[i].y;
+		if(points[i].x > max.x)
+			max.x = points[i].x;
+		if(points[i].y > max.y)
+			max.y = points[i].y;
+	}
+
+	POINT ctr = { (min.x + max.x) >> 1, (min.y + max.y) >> 1 };
+	for(u16 i=0; i<cnt; i++)
+	{
+		points[i].x += (points[i].x < ctr.x) ? -width : width;
+		points[i].y += (points[i].y < ctr.y) ? -height : height;
+	}
+}
+
 void offsetRect(PRECT rc, DU left, DU top)
 {
 	rc->left	+= left;
@@ -177,13 +202,16 @@ void drawVertArrow(PRECT rect, DrawFlags alignment)
 	}
 }
 
-void drawArrow(PRECT rect, DrawFlags alignment)
+void drawArrow(PRECT rect, DrawFlags flags)
 {
 	DU bt	= rect->top + rect->height - 1;
 	DU ao	= rect->height >> 1;
-	DU l 	= (alignment & AlignRight) ? rect->left + ao : rect->left;
+	DU l 	= (flags & AlignRight) ? rect->left + ao : rect->left;
 	DU w 	= rect->width - ao;
 	DU mp	= rect->top + ao;
+
+	COLOUR fore	= (flags & Inverse) ? background : foreground;
+	COLOUR back	= (flags & Inverse) ? foreground : background;
 
 	mset(ptToOffset(l, rect->top), foreground, w);
 	mset(ptToOffset(l, bt), foreground, w);
@@ -191,17 +219,19 @@ void drawArrow(PRECT rect, DrawFlags alignment)
 	for(DU i=rect->top + 1; i<bt; i++)
 	{
 		DU z 	= abs(mp - i) + 1;
-		l 		= (alignment == AlignRight) ? rect->left + z : rect->left;
+		l 		= (flags == AlignRight) ? rect->left + z : rect->left;
 		w		= rect->width - z;
 
-		setPixel(l, i, foreground);
-		mset(ptToOffset(l+1, i), background, w - 1);
-		setPixel(l+w, i, foreground);
+		setPixel(l, i, fore);
+		mset(ptToOffset(l+1, i), back, w - 1);
+		setPixel(l+w, i, fore);
 	}
 }
 
 void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 {
+	COLOUR fore	= (flags & Inverse) ? background : foreground;
+
 	while(cnt >= 2)
 	{
 		PLINE line = (PLINE)pt;
@@ -235,7 +265,7 @@ void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 				if(x < clip->left) x = clip->left;
 				if(x + dx > clip->left + clip->width) dx -= ((x + dx) - (clip->left + clip->width));
 
-				mset(ptToOffset(x, line->p1.y), foreground, dx);
+				mset(ptToOffset(x, line->p1.y), fore, dx);
 			}
 		}
 		else if(dx == 0)
@@ -249,13 +279,13 @@ void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 				dy += y;
 
 				for (DU i = y; i < dy; i++)
-					setPixel(x, i, foreground);
+					setPixel(x, i, fore);
 			}
 		}
 		else if (dx > dy)
 		{
 			if(ptInRect(clip, x, y))
-				setPixel(x, y, foreground);
+				setPixel(x, y, fore);
 
 			e = 2*dy - dx;
 			inc1 = 2 * ( dy -dx);
@@ -276,13 +306,13 @@ void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 				x += incx;
 
 				if(ptInRect(clip, x, y))
-					setPixel(x, y, foreground);
+					setPixel(x, y, fore);
 			}
 		}
 		else
 		{
 			if(ptInRect(clip, x, y))
-				setPixel(x, y, foreground);
+				setPixel(x, y, fore);
 
 			e = 2 * dx - dy;
 			inc1 = 2 * (dx - dy);
@@ -303,7 +333,7 @@ void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 				y += incy;
 
 				if(ptInRect(clip, x, y))
-					setPixel(x, y, foreground);
+					setPixel(x, y, fore);
 			}
 		}
 

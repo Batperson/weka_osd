@@ -91,9 +91,6 @@ typedef struct
 	RENDERER hdr;
 	u16 valueOffset;
 	RANGE range;
-	RECT rect2;
-	PFONT font;
-	char* format;
 } INDICATOR, *PINDICATOR;
 
 typedef struct

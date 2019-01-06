@@ -110,6 +110,8 @@ void sizeRect(PRECT rc, DU width, DU height);
 void offsetPts(PPOINT ppt, u16 cnt, DU dx, DU dy);
 void rotatePts(PPOINT ppt, u16 cnt, PPOINT ctr, float angle);
 
+void inflatePoints(PPOINT points, u16 cnt, DU width, DU height);
+
 void clearRenderBuf();
 
 void drawTestPattern(PRECT rect);
