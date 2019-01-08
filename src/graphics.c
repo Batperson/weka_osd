@@ -230,9 +230,13 @@ void drawArrow(PRECT rect, DrawFlags flags)
 
 void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 {
-	COLOUR fore	= (flags & Inverse) ? background : foreground;
+	COLOUR fore;
+	u16 ocnt 	= cnt;
 
-	while(cnt >= 2)
+draw:
+	fore	= (flags & (Inverse | Outline)) ? background : foreground;
+
+	while(cnt > 0)
 	{
 		PLINE line = (PLINE)pt;
 
@@ -247,30 +251,35 @@ void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 
 		if(dx < 0) dx = -dx;
 		if(dy < 0) dy = -dy;
-		incx = 1;
 
-		if(line->p2.x < line->p1.x) incx = -1;
-		incy = 1;
-
-		if(line->p2.y < line->p1.y) incy = -1;
+		incx = (line->p2.x < line->p1.x) ? -1 : 1;
+		incy = (line->p2.y < line->p1.y) ? -1 : 1;
 
 		x=line->p1.x;
 		y=line->p1.y;
 
+		if(flags & Outline)
+		{
+			if(dx == 0 || dy != 0)
+				x--;
+			if(dy == 0 || dx != 0)
+				y--;
+		}
+
 		if(dy == 0)
 		{
-			if(line->p1.y >= clip->top && line->p1.y < clip->top + clip->height)
+			if(y >= clip->top && y < clip->top + clip->height)
 			{
 				if(x > line->p2.x) x = line->p2.x;
 				if(x < clip->left) x = clip->left;
 				if(x + dx > clip->left + clip->width) dx -= ((x + dx) - (clip->left + clip->width));
 
-				mset(ptToOffset(x, line->p1.y), fore, dx);
+				mset(ptToOffset(x, y), fore, dx);
 			}
 		}
 		else if(dx == 0)
 		{
-			if(line->p1.x >= clip->left && line->p1.x < clip->left + clip->width)
+			if(x >= clip->left && x < clip->left + clip->width)
 			{
 				if(y > line->p2.y) y = line->p2.y;
 				if(y < clip->top) y = clip->top;
@@ -337,19 +346,28 @@ void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 			}
 		}
 
-		cnt -= incr;
+		cnt--;
 		pt += incr;
+	}
+
+	if(flags & Outline)
+	{
+		pt 		-= (ocnt * incr);
+		cnt		= ocnt;
+		flags 	&= ~Outline;
+
+		goto draw;
 	}
 }
 
 void drawLine(PLINE line, DrawFlags flags, PRECT clip)
 {
-	drawLinesImpl((PPOINT)line, 2, 2, foreground, clip);
+	drawLinesImpl((PPOINT)line, 1, 2, flags, clip);
 }
 
 void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip)
 {
-	drawLinesImpl((PPOINT)line, cnt * 2, 2, foreground, clip);
+	drawLinesImpl((PPOINT)line, cnt, 2, flags, clip);
 }
 
 void drawPolyLine(PPOINT points, u16 cnt, DrawFlags flags, PRECT clip)

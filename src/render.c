@@ -457,7 +457,7 @@ void renderHeadingTape(PRENDERER r)
 			startPoint		+= pt->pixelsPerDivision;
 		}
 
-		drawLines(lines, lcnt, None, &pt->hdr.rect);
+		drawLines(lines, lcnt, df, &pt->hdr.rect);
 
 		divs -= lcnt;
 	}
@@ -573,7 +573,7 @@ void renderTape(PRENDERER r)
 			startPoint		+= pt->pixelsPerDivision;
 		}
 
-		drawLines(lines, lcnt, None, &pt->hdr.rect);
+		drawLines(lines, lcnt, df, &pt->hdr.rect);
 
 		divs -= lcnt;
 	}
@@ -620,13 +620,13 @@ void renderVerticalSlider(PRENDERER r)
 
 	if(ps->hdr.flags & RF_ALIGN_RIGHT)
 	{
-		minDivLeft		= majDivLeft		= ps->hdr.rect.left;
+		minDivLeft		= majDivLeft		= ps->hdr.rect.left + 1;
 		lines[0].p1.x	= lines[0].p2.x		= ps->hdr.rect.left;
 	}
 	else
 	{
-		minDivLeft		= (ps->hdr.rect.left + ps->hdr.rect.width) - ps->minorDivisionWidth;
-		majDivLeft		= (ps->hdr.rect.left + ps->hdr.rect.width) - ps->majorDivisionWidth;
+		minDivLeft		= ((ps->hdr.rect.left + ps->hdr.rect.width) - ps->minorDivisionWidth) - 1;
+		majDivLeft		= ((ps->hdr.rect.left + ps->hdr.rect.width) - ps->majorDivisionWidth) - 1;
 		lines[0].p1.x	= lines[0].p2.x		= ps->hdr.rect.left + ps->hdr.rect.width;
 	}
 
@@ -667,7 +667,6 @@ void renderVerticalSlider(PRENDERER r)
 		if(++curLine == LINE_RENDER_BATCH || i == divs)
 		{
 			drawLines(lines, curLine, df, NULL);
-
 			curLine = 0;
 		}
 	}

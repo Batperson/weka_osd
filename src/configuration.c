@@ -57,6 +57,7 @@ PSCALE allocTape()
 {
 	PSCALE tape						= (PSCALE)allocRenderer(sizeof(SCALE));
 	tape->hdr.renderProc			= (RENDERPROC)&renderTape;
+	tape->hdr.flags					= RF_OUTLINE;
 	tape->valueOffset				= offsetof(MODEL, vel.horizontal);
 	tape->minValue					= -FLT_MAX;
 	tape->maxValue					= FLT_MAX;
@@ -74,6 +75,7 @@ PSCALE allocHeadingTape()
 {
 	PSCALE tape						= allocTape();
 	tape->hdr.renderProc			= (RENDERPROC)&renderHeadingTape;
+	tape->hdr.flags				 	= RF_OUTLINE;
 	tape->unitsPerDivision			= 2;
 	tape->valueOffset				= offsetof(MODEL, att.heading);
 
@@ -84,6 +86,7 @@ PSCALE allocSlider()
 {
 	PSCALE slider					= (PSCALE)allocRenderer(sizeof(SCALE));
 	slider->hdr.renderProc			= (RENDERPROC)&renderVerticalSlider;
+	slider->hdr.flags				= RF_OUTLINE;
 	slider->valueOffset				= offsetof(MODEL, vel.vertical);
 	slider->minValue				= -5;
 	slider->maxValue				= 5;
@@ -234,7 +237,7 @@ void initRenderers()
 
 	PSCALE vario				= allocSlider();
 	initRect(&vario->hdr.rect, 300, 130, 20, 90);
-	vario->hdr.flags			= RF_ALIGN_RIGHT;
+	vario->hdr.flags			= RF_ALIGN_RIGHT | RF_OUTLINE;
 
 	PDYNLABEL varioVal			= allocDynLabel();
 	initRect(&varioVal->hdr.rect, 282, 221, 30, 10);
