@@ -23,6 +23,104 @@ static RECT rcBuf = { 0, 0, FRAME_BUF_WIDTH, FRAME_BUF_HEIGHT };
 static COLOUR foreground = RGB(3,3,3);
 static COLOUR background = RGB(0,0,0);
 
+ALWAYS_INLINE void expand1bpp8Mask(u8* dst, u8* src, u8 cnt)
+{
+	u8 spos 			= 0;
+	u8 dpos				= 0;
+	register u8 srcVal	= *src;
+	register u32 dstVal	= 0;
+
+	while(cnt > 0)
+	{
+		*dst++ 	= (srcVal & 0x8000) ? 0xff: 0x00;
+
+		if(spos++ >= 7)
+		{
+			spos	= 0;
+			srcVal 	= *src++;
+		}
+		else
+		{
+			srcVal <<= 1;
+		}
+	}
+}
+
+ALWAYS_INLINE void blit(u8* src, u8* dst, u8* mask, u32 width)
+{
+	// Note src, dst, mask are all word-aligned. src is 4 bytes wide.
+}
+
+void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
+{
+	u8 padl		= (font->padding & 0x03);
+	u8 padt		= (font->padding & 0x0C) >> 2;
+	u8 padr		= (font->padding & 0x30) >> 4;
+	u8 padb		= (font->padding & 0xC0) >> 6;
+
+	DU top		= rect->top;
+	DU bottom	= rect->top + rect->height;
+	DU left		= rect->left;
+	DU right	= rect->left + rect->width;
+	DU height	= (flags & AlignBottom) ? rect->height - padb : rect->height - padt;
+	DU textW;
+
+	COLOUR fg 	= (flags & Inverse) ? background : foreground;
+	COLOUR bg 	= (flags & Inverse) ? foreground : background;
+
+	// First fill in the background if applicable
+	if(flags & Fill)
+		for(DU i = top; i<=bottom; i++)
+			mset(ptToOffset(rect->left, i), bg, rect->width);
+
+	// Calculate position to render first character
+	if(flags & AlignRight)
+		textW =	strlen(text) * font->charwidth;
+
+	DU x		= (flags & AlignRight) ? (right - textW) - padr : left + padl;
+	DU y		= (flags & AlignBottom) ? (bottom - font->charheight) - padb : top + padt;
+
+	// Loop through each character
+	for(char c = *text; c != 0; c = *++text)
+	{
+		if(x + font->charwidth < left)
+			continue;
+		if(x >= right)
+			break;
+
+		// Loop through each line in the character source bitmap
+		int lstart 	= 0;
+		int lend	= font->charheight;
+
+		if(flags & AlignBottom)
+		{
+			if(lend < height)
+				lstart = lend - height;
+		}
+		else
+		{
+			if(lend < height)
+				lend = height;
+		}
+
+		int yoff = 0;
+		for(int i=lstart; i<lend; i++)
+		{
+			u8* src	= font->data + ((c-font->asciiOffset) * font->charheight) + (i * font->bytesPerLine);
+			u8* dst = ptToOffset(x, y + yoff++);
+
+			u32 mask;
+			expand1bpp8Mask((u8*)&mask, src, font->charwidth);
+
+			// todo: mask = 8 bytes wide
+			// offset into mask passed to expand(), based on position of dest pixel within word
+			// dest pixel is word aligned
+			// width to take account of offset + remaining space in rect
+			blit(&fore, dst, &mask, width);
+		}
+	}
+}
+
 void initRect(PRECT rc, DU left, DU top, DU width, DU height)
 {
 	rc->left 	= left;
@@ -171,8 +269,6 @@ void drawRect(PRECT rect, DrawFlags flags)
 			setPixel(rect->left + rect->width-1, i, fore);
 		}
 	}
-
-
 }
 
 void drawVertArrow(PRECT rect, DrawFlags alignment)
