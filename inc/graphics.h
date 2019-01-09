@@ -119,7 +119,6 @@ void drawRect(PRECT rect, DrawFlags flags);
 void drawLine(PLINE line, DrawFlags flags, PRECT clip);
 void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip);
 void drawPolyLine(PPOINT points, u16 cnt, DrawFlags flags, PRECT clip);
-void drawArrow(PRECT rect, DrawFlags alignment);
 void drawVertArrow(PRECT rect, DrawFlags alignment);
 void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text);
 void floodFill(PPOINT pt, COLOUR clr);

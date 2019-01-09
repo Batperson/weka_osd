@@ -202,32 +202,6 @@ void drawVertArrow(PRECT rect, DrawFlags alignment)
 	}
 }
 
-void drawArrow(PRECT rect, DrawFlags flags)
-{
-	DU bt	= rect->top + rect->height - 1;
-	DU ao	= rect->height >> 1;
-	DU l 	= (flags & AlignRight) ? rect->left + ao : rect->left;
-	DU w 	= rect->width - ao;
-	DU mp	= rect->top + ao;
-
-	COLOUR fore	= (flags & Inverse) ? background : foreground;
-	COLOUR back	= (flags & Inverse) ? foreground : background;
-
-	mset(ptToOffset(l, rect->top), foreground, w);
-	mset(ptToOffset(l, bt), foreground, w);
-
-	for(DU i=rect->top + 1; i<bt; i++)
-	{
-		DU z 	= abs(mp - i) + 1;
-		l 		= (flags == AlignRight) ? rect->left + z : rect->left;
-		w		= rect->width - z;
-
-		setPixel(l, i, fore);
-		mset(ptToOffset(l+1, i), back, w - 1);
-		setPixel(l+w, i, fore);
-	}
-}
-
 void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 {
 	COLOUR fore;
@@ -372,7 +346,13 @@ void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip)
 
 void drawPolyLine(PPOINT points, u16 cnt, DrawFlags flags, PRECT clip)
 {
-	drawLinesImpl(points, cnt, 1, flags, clip);
+	if(flags & Outline)
+	{
+		drawLinesImpl(points, cnt-1, 1, Inverse, clip);
+		inflatePoints(points, cnt, -1, -1);
+	}
+
+	drawLinesImpl(points, cnt-1, 1, None, clip);
 }
 
 void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)

@@ -39,7 +39,7 @@ PRENDERER allocRenderer(size_t size)
 
 	renderer->size		= size;
 	renderer->flags		= 0;
-	renderer->colour	= RGB(2,3,2);	// Default colour
+	renderer->colour	= RGB(3,3,2);	// Default colour
 
 	return renderer;
 }
@@ -103,6 +103,7 @@ PSCALE allocSlider()
 PARROW allocArrow()
 {
 	PARROW arrow					= (PARROW)allocRenderer(sizeof(ARROW));
+	arrow->hdr.flags				= RF_OUTLINE;
 	arrow->hdr.renderProc			= (RENDERPROC)&renderArrow;
 	arrow->valueOffset				= offsetof(MODEL, att.homeVector);
 

@@ -130,6 +130,11 @@ void renderBarMeter(PRENDERER r)
 	selectForeColour(ofc);
 }
 
+void initBatteryMeterPolygon(POINT pt[9], RenderFlagsType rf)
+{
+
+}
+
 void renderBatteryMeter(PRENDERER r)
 {
 	PINDICATOR pi = (PINDICATOR)r;
@@ -204,13 +209,9 @@ void renderBatteryMeter(PRENDERER r)
 	}
 
 	if(r->flags & RF_OUTLINE)
-	{
-		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), Inverse, NULL);
-		inflatePoints(pt, sizeof(pt) / sizeof(POINT), -1, -1);
 		inflateRect(&rc, -1, -1);
-	}
 
-	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
+	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), r->flags & RF_OUTLINE, NULL);
 
 	renderBarFill(&rc, seg, scale, r->flags);
 
@@ -341,7 +342,7 @@ void renderArrow(PRENDERER r)
 	COLOUR ofc		= selectForeColour(r->colour);
 
 	rotatePts(pts, sizeof(pts) / sizeof(POINT), &ctr, value);
-	drawPolyLine(pts, sizeof(pts) / sizeof(POINT), None, NULL);
+	drawPolyLine(pts, sizeof(pts) / sizeof(POINT), r->flags & RF_OUTLINE, NULL);
 	floodFill(&ctr, r->colour);
 
 	selectForeColour(ofc);
@@ -487,6 +488,45 @@ void renderHeadingTape(PRENDERER r)
 	selectForeColour(ofc);
 }
 
+void renderHorzPointer(PRECT rc, RenderFlagsType rf)
+{
+	POINT pt[6];
+	DU hh 	= rc->height >> 1;
+
+	if(rf & RF_ALIGN_RIGHT)
+	{
+		pt[0].x = rc->left;
+		pt[0].y	= rc->top;
+		pt[1].x	= rc->left + rc->width - hh;
+		pt[1].y = rc->top;
+		pt[2].x = rc->left + rc->width;
+		pt[2].y = pt[1].y + hh;
+		pt[3].x = pt[1].x;
+		pt[3].y = rc->top + hh * 2;
+		pt[4].x = rc->left;
+		pt[4].y = pt[3].y;
+		pt[5].x = rc->left;
+		pt[5].y = rc->top;
+	}
+	else
+	{
+		pt[0].x = rc->left + hh;
+		pt[0].y	= rc->top;
+		pt[1].x	= rc->left + rc->width;
+		pt[1].y = rc->top;
+		pt[2].x = pt[1].x;
+		pt[2].y = rc->top + hh * 2;
+		pt[3].x = rc->left + hh;
+		pt[3].y = rc->top + hh * 2;
+		pt[4].x = rc->left;
+		pt[4].y = rc->top + hh;
+		pt[5].x = rc->left + hh;
+		pt[5].y = rc->top;
+	}
+
+	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), rf & Outline, NULL);
+}
+
 void renderTape(PRENDERER r)
 {
 	PSCALE pt = (PSCALE)r;
@@ -578,7 +618,7 @@ void renderTape(PRENDERER r)
 		divs -= lcnt;
 	}
 
-	DU arrowHeight			= pt->font->charheight + 4;
+	DU arrowHeight			= pt->font->charheight + 6;
 	DU arrowWidth			= (pt->font->charwidth * 4) + (pt->font->charheight >> 1) + 4;
 
 	rc.left					= (pt->hdr.flags & RF_ALIGN_RIGHT) ? (pt->hdr.rect.left + pt->hdr.rect.width) - arrowWidth : pt->hdr.rect.left;
@@ -586,9 +626,9 @@ void renderTape(PRENDERER r)
 	rc.width				= arrowWidth;
 	rc.height				= arrowHeight;
 
-	drawArrow(&rc, (pt->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );
+	renderHorzPointer(&rc, pt->hdr.flags);
 
-	rc.top += 2;
+	rc.top += 3;
 	rc.left += (pt->hdr.flags & RF_ALIGN_RIGHT) ? 1 : arrowHeight >> 1;
 	rc.width -= arrowHeight >> 1;
 
@@ -611,8 +651,6 @@ void renderVerticalSlider(PRENDERER r)
 	COLOUR ofc			= selectForeColour(ps->hdr.colour);
 
 	LINE lines[LINE_RENDER_BATCH];
-	lines[0].p1.y		= ps->hdr.rect.top;
-	lines[0].p2.y		= ps->hdr.rect.top + (divs * pixelsPerDiv);
 
 	char sz[6];
 
@@ -620,17 +658,13 @@ void renderVerticalSlider(PRENDERER r)
 
 	if(ps->hdr.flags & RF_ALIGN_RIGHT)
 	{
-		minDivLeft		= majDivLeft		= ps->hdr.rect.left + 1;
-		lines[0].p1.x	= lines[0].p2.x		= ps->hdr.rect.left;
+		minDivLeft		= majDivLeft		= ps->hdr.rect.left;
 	}
 	else
 	{
-		minDivLeft		= ((ps->hdr.rect.left + ps->hdr.rect.width) - ps->minorDivisionWidth) - 1;
-		majDivLeft		= ((ps->hdr.rect.left + ps->hdr.rect.width) - ps->majorDivisionWidth) - 1;
-		lines[0].p1.x	= lines[0].p2.x		= ps->hdr.rect.left + ps->hdr.rect.width;
+		minDivLeft		= (ps->hdr.rect.left + ps->hdr.rect.width) - ps->minorDivisionWidth;
+		majDivLeft		= (ps->hdr.rect.left + ps->hdr.rect.width) - ps->majorDivisionWidth;
 	}
-
-	drawLine(&lines[0], df, NULL);
 
 	int curLine			= 0;
 	int curValue		= ps->maxValue;
@@ -676,11 +710,11 @@ void renderVerticalSlider(PRENDERER r)
 
 	DU offset	= truncf(((ps->maxValue - value) / (float)ps->unitsPerDivision) * (float)pixelsPerDiv);
 
-	rc.left		= (ps->hdr.flags & RF_ALIGN_RIGHT) ? ps->hdr.rect.left - 2 : ps->hdr.rect.left + ps->hdr.rect.width;
+	rc.left		= (ps->hdr.flags & RF_ALIGN_RIGHT) ? ps->hdr.rect.left - 5 : ps->hdr.rect.left + ps->hdr.rect.width;
 	rc.top		= (ps->hdr.rect.top + offset) - 2;
 	rc.width 	= rc.height		= 5;
 
-	drawArrow(&rc, (ps->hdr.flags & RF_ALIGN_RIGHT) ? AlignLeft : AlignRight );
+	renderHorzPointer(&rc, ps->hdr.flags);
 
 	selectForeColour(ofc);
 }
