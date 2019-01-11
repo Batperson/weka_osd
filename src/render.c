@@ -719,6 +719,9 @@ void renderVerticalSlider(PRENDERER r)
 	selectForeColour(ofc);
 }
 
+extern FONT systemFont;
+extern FONT tinyFont;
+
 void INTERRUPT PendSV_Handler()
 {
 	// Reset cycle counter
@@ -726,6 +729,33 @@ void INTERRUPT PendSV_Handler()
 
 	clearRenderBuf();
 
+	RECT rc = { 100, 40, 200, 20 };
+	COLOUR cols[] = {
+			RED,
+			ORANGE,
+			GREEN,
+			LTGREEN,
+			BLUE,
+			AQUAMARINE,
+			YELLOW,
+			MAGENTA,
+			CYAN,
+			PURPLE,
+			WHITE,
+			BLACK,
+			GRAY,
+			DKGRAY
+	};
+
+	for(int i=0; i<14; i++)
+	{
+		selectForeColour(cols[i]);
+		drawText2(&rc, &systemFont, Outline, "WEKA OSD 0123456789*");
+
+		rc.top += systemFont.charheight + 6;
+	}
+
+	/*
 	for(PRENDERER* p = renderers; *p != NULL; p++)
 	{
 		PRENDERER r = *p;
@@ -736,6 +766,7 @@ void INTERRUPT PendSV_Handler()
 
 		r->renderProc(r);
 	}
+	*/
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;

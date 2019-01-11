@@ -23,16 +23,18 @@ static RECT rcBuf = { 0, 0, FRAME_BUF_WIDTH, FRAME_BUF_HEIGHT };
 static COLOUR foreground = RGB(3,3,3);
 static COLOUR background = RGB(0,0,0);
 
+static PIXEL mask[32] ALIGNED(4);
+
 ALWAYS_INLINE void expand1bpp8Mask(u8* dst, u8* src, u8 cnt)
 {
 	u8 spos 			= 0;
-	u8 dpos				= 0;
 	register u8 srcVal	= *src;
-	register u32 dstVal	= 0;
 
-	while(cnt > 0)
+	u8 rcnt				= (4 - (cnt & 0x03)) & 0x03;
+
+	while(cnt-- > 0)
 	{
-		*dst++ 	= (srcVal & 0x8000) ? 0xff: 0x00;
+		*dst++ 	= (srcVal & 0x80) ? 0xff: 0x00;
 
 		if(spos++ >= 7)
 		{
@@ -44,11 +46,38 @@ ALWAYS_INLINE void expand1bpp8Mask(u8* dst, u8* src, u8 cnt)
 			srcVal <<= 1;
 		}
 	}
+
+	while(rcnt-- > 0)
+	{
+		*dst++ = 0x00;
+	}
 }
 
-ALWAYS_INLINE void blit(u8* src, u8* dst, u8* mask, u32 width)
+/**
+  * @brief  Uses a bitblt-style transfer to copy pixels using a mask
+  * @param  src: The source bitmap. Assumed to be a 4-byte word-aligned solid colour brush.
+  * @param  dst: The destination to copy pixels to. Must be word-aligned.
+  * @param mask: The mask to use. Must be word-aligned.
+  * @param cnt:  Number of pixels to transfer.
+  * @retval None
+  */
+ALWAYS_INLINE void blitbrush(u32* src, u8* dst, u8* mask, int cnt)
 {
 	// Note src, dst, mask are all word-aligned. src is 4 bytes wide.
+	u32 tmp;
+	u32 tmp2;
+
+	while(cnt > 0)
+	{
+		tmp 		= (*(u32*)mask) & *(u32*)src;
+		tmp2		= (~*(u32*)mask) & *(u32*)dst;
+
+		*(u32*)dst	= tmp | tmp2;
+
+		dst 		+= 4;
+		mask		+= 4;
+		cnt			-= 4;
+	}
 }
 
 void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
@@ -58,66 +87,133 @@ void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
 	u8 padr		= (font->padding & 0x30) >> 4;
 	u8 padb		= (font->padding & 0xC0) >> 6;
 
-	DU top		= rect->top;
-	DU bottom	= rect->top + rect->height;
-	DU left		= rect->left;
 	DU right	= rect->left + rect->width;
-	DU height	= (flags & AlignBottom) ? rect->height - padb : rect->height - padt;
-	DU textW;
+	DU textW	= strlen(text) * font->charwidth;
 
-	COLOUR fg 	= (flags & Inverse) ? background : foreground;
-	COLOUR bg 	= (flags & Inverse) ? foreground : background;
+	DU x, y;
+
+	COLOUR fg, bg;
+	if(flags & Inverse)
+	{
+		fg = background;
+		bg = foreground;
+	}
+	else
+	{
+		fg = foreground;
+		bg = background;
+	}
+
+	u32 fbrush	= fg | (fg << 8) | (fg << 16) | (fg << 24);
+
+	int lstart 	= 0;
+	int lend	= font->charheight;
+	int lheight	= (flags & AlignBottom) ? rect->height - padb : rect->height - padt;
+
+	// Calculate Y position for rendering, and the line within the font bitmap to render from
+	if(flags & AlignBottom)
+	{
+		y		= ((rect->top + rect->height) - font->charheight) - padb;
+		if(lend < lheight)
+			lstart = lend - lheight;
+	}
+	else
+	{
+		y		= rect->top + padt;
+		if(lend > lheight)
+			lend 	= lheight;
+	}
 
 	// First fill in the background if applicable
 	if(flags & Fill)
-		for(DU i = top; i<=bottom; i++)
-			mset(ptToOffset(rect->left, i), bg, rect->width);
-
-	// Calculate position to render first character
-	if(flags & AlignRight)
-		textW =	strlen(text) * font->charwidth;
-
-	DU x		= (flags & AlignRight) ? (right - textW) - padr : left + padl;
-	DU y		= (flags & AlignBottom) ? (bottom - font->charheight) - padb : top + padt;
-
-	// Loop through each character
-	for(char c = *text; c != 0; c = *++text)
 	{
-		if(x + font->charwidth < left)
+		DU bwidth	= textW + padl + padr;
+		DU bheight = font->charheight + padt + padb;
+
+		if(bwidth > rect->width)
+			bwidth = rect->width;
+		if(bheight > rect->height)
+			bheight = rect->height;
+
+		while(bheight-- > 0)
+			mset(ptToOffset(rect->left, rect->top + bheight), bg, bwidth);
+	}
+	else if(flags & Outline)
+	{
+		x 			= (flags & AlignRight) ? (right - textW) - padr : rect->left + padl;
+		u32 bbrush	= bg | (bg << 8) | (bg << 16) | (bg << 24);
+
+		// Loop through each character rendering an outline in the background colour
+		for(char* c = text; *c; c++)
+		{
+			if(x + font->charwidth < rect->left)
+				continue;
+			if(x >= right)
+				break;
+
+			// Loop through each char bitmap line
+			int yoff = 0;
+			for(int i=lstart; i<lend; i++)
+			{
+				u8* src	= font->data + ((*c-font->asciiOffset) * font->charheight) + (i * font->bytesPerLine);
+				u8* dst = ptToOffset(x, y + yoff++);
+				u8 ofst	= ((u32)dst & 0x03);
+
+				dst = (u8*)((u32)dst & ~0x03);
+
+				// Clear first 4 bytes of mask, no need to worry about the rest
+				*((u32*)mask) = 0x00;
+				expand1bpp8Mask(mask + ofst, src, font->charwidth);
+
+				// Blit above, below, left and right using the mask.
+				// Note that dst and mask are both word-aligned and our pointer arithmetic requires
+				// that the frame buffer line width is a multiple of 4.
+				blitbrush(&bbrush, dst - FRAME_BUF_WIDTH, mask, ofst + font->charwidth);
+				blitbrush(&bbrush, dst + FRAME_BUF_WIDTH, mask, ofst + font->charwidth);
+
+				for(int j=0; j<=font->bytesPerLine; j++)
+				{
+					u32 tmp = mask[j];
+					mask[j] = (tmp << 8) || (tmp >> 8);
+				}
+
+				blitbrush(&bbrush, dst, mask, ofst + font->charwidth);
+			}
+
+			x += font->charwidth;
+		}
+	}
+
+	// Calculate X position to render first character
+	x = (flags & AlignRight) ? (right - textW) - padr : rect->left + padl;
+
+	// Loop through each character rendering in the foreground colour
+	for(char* c = text; *c; c++)
+	{
+		if(x + font->charwidth < rect->left)
 			continue;
 		if(x >= right)
 			break;
 
-		// Loop through each line in the character source bitmap
-		int lstart 	= 0;
-		int lend	= font->charheight;
-
-		if(flags & AlignBottom)
-		{
-			if(lend < height)
-				lstart = lend - height;
-		}
-		else
-		{
-			if(lend < height)
-				lend = height;
-		}
-
+		// Loop through each char bitmap line
 		int yoff = 0;
 		for(int i=lstart; i<lend; i++)
 		{
-			u8* src	= font->data + ((c-font->asciiOffset) * font->charheight) + (i * font->bytesPerLine);
+			u8* src	= font->data + ((*c-font->asciiOffset) * font->charheight) + (i * font->bytesPerLine);
 			u8* dst = ptToOffset(x, y + yoff++);
 
-			u32 mask;
-			expand1bpp8Mask((u8*)&mask, src, font->charwidth);
+			u8 ofst	= ((u32)dst & 0x03);
+			dst = (u8*)((u32)dst & ~0x03);
 
-			// todo: mask = 8 bytes wide
-			// offset into mask passed to expand(), based on position of dest pixel within word
-			// dest pixel is word aligned
-			// width to take account of offset + remaining space in rect
-			blit(&fore, dst, &mask, width);
+			// Clear first 4 bytes of mask, no need to worry about the rest
+			*((u32*)mask) = 0x00;
+			expand1bpp8Mask(mask + ofst, src, font->charwidth);
+
+			// blit foreground colour using mask
+			blitbrush(&fbrush, dst, mask, ofst + font->charwidth);
 		}
+
+		x += font->charwidth;
 	}
 }
 
