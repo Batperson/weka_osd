@@ -721,6 +721,7 @@ void renderVerticalSlider(PRENDERER r)
 
 extern FONT systemFont;
 extern FONT tinyFont;
+extern FONT tinyFont2;
 
 void INTERRUPT PendSV_Handler()
 {
@@ -750,9 +751,9 @@ void INTERRUPT PendSV_Handler()
 	for(int i=0; i<14; i++)
 	{
 		selectForeColour(cols[i]);
-		drawText2(&rc, &systemFont, Outline, "WEKA OSD 0123456789*");
+		drawText3(&rc, &tinyFont2, Outline, "-./0-./0-./0-./0-./0-./0-./0-./0-./0-./0");
 
-		rc.top += systemFont.charheight + 6;
+		rc.top += tinyFont2.charheight + 6;
 	}
 
 	/*

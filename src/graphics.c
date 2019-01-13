@@ -11,6 +11,7 @@
 #include "graphics.h"
 #include "memory.h"
 #include "video.h"
+#include "misc.h"
 
 extern volatile PPIXEL currentRenderBuf;
 
@@ -24,168 +25,132 @@ static COLOUR foreground = RGB(3,3,3);
 static COLOUR background = RGB(0,0,0);
 
 static PIXEL mask[32] ALIGNED(4);
+static PIXEL bmap[32] ALIGNED(4);
 
-ALWAYS_INLINE void expand1bpp8Mask(u8* dst, u8* src, u8 cnt)
+ALWAYS_INLINE void expand2bpp8(u32* dst, u32* mask, u8 offset, u8* src, u8 cnt, COLOUR* palette)
 {
-	u8 spos 			= 0;
-	register u8 srcVal	= *src;
+	register u32 mval		= 0xffffffff;
+	register u32 dval		= 0x00;
+	register u32 pindex;
+	register u32 tmp;
 
-	u8 rcnt				= (4 - (cnt & 0x03)) & 0x03;
+	int sror				= 6;
+	int drol				= offset << 3;
 
 	while(cnt-- > 0)
 	{
-		*dst++ 	= (srcVal & 0x80) ? 0xff: 0x00;
-
-		if(spos++ >= 7)
+		// src is shifted right based on the inverse of src offset, since left-most palette index is at left-most position in src
+		pindex				= ((*src) >> sror) & 0x03;
+		if((sror -= 2) < 0)
 		{
-			spos	= 0;
-			srcVal 	= *src++;
+			sror = 6;
+			src++;
 		}
-		else
+
+		// dst and mask shifts take account of little-endian word arrangement, i.e. left-most pixel goes at right-most byte
+		tmp					= *(palette + pindex) << drol;
+		dval 				|= tmp;
+
+		// mask bits are cleared if palette is an opaque colour, set if not.
+		mval 				&= rol(tmp ? 0xffffff00 : 0xffffffff, drol);
+
+		if((drol += 8) > 24)
 		{
-			srcVal <<= 1;
+			drol 	= 0;
+			*mask++		= mval;
+			*dst++		= dval;
+
+			mval		= 0xffffffff;
+			dval		= 0x00;
 		}
 	}
 
-	while(rcnt-- > 0)
+	if(drol > 0)
 	{
-		*dst++ = 0x00;
+		*mask		= mval;
+		*dst		= dval;
+	}
+}
+
+
+
+/**
+  * @brief  Uses a bitblt-style transfer to copy pixels using a mask
+  * @param  src: The source bitmap.
+  * @param  dst: The destination to copy pixels to.
+  * @param mask: The mask to use.
+  * @param cnt:  Number of words (4-pixel blocks) to transfer.
+  * @retval None
+  */
+ALWAYS_INLINE void blit(u32* src, u32* dst, u32* mask, int cnt)
+{
+	register u32 tmp;
+	while(cnt-- > 0)
+	{
+		tmp 		= *dst;
+		tmp			&= *mask++;
+		tmp			|= *src++;
+
+		*dst++		= tmp;
 	}
 }
 
 /**
-  * @brief  Uses a bitblt-style transfer to copy pixels using a mask
-  * @param  src: The source bitmap. Assumed to be a 4-byte word-aligned solid colour brush.
-  * @param  dst: The destination to copy pixels to. Must be word-aligned.
-  * @param mask: The mask to use. Must be word-aligned.
-  * @param cnt:  Number of pixels to transfer.
+  * @brief  Draws text using the specified font and flags.
+  * @param  rect: The location and clip rectangle for rendering. Position within rect is dependent on flags.
+  * @param  font: The font to use.
+  * @param flags: Controls the style and position used when rendering.
+  * @param text: The text to render.
   * @retval None
   */
-ALWAYS_INLINE void blitbrush(u32* src, u8* dst, u8* mask, int cnt)
+void drawText3(PRECT rect, PFONT font, DrawFlags flags, char* text)
 {
-	// Note src, dst, mask are all word-aligned. src is 4 bytes wide.
-	u32 tmp;
-	u32 tmp2;
-
-	while(cnt > 0)
-	{
-		tmp 		= (*(u32*)mask) & *(u32*)src;
-		tmp2		= (~*(u32*)mask) & *(u32*)dst;
-
-		*(u32*)dst	= tmp | tmp2;
-
-		dst 		+= 4;
-		mask		+= 4;
-		cnt			-= 4;
-	}
-}
-
-void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
-{
-	u8 padl		= (font->padding & 0x03);
-	u8 padt		= (font->padding & 0x0C) >> 2;
-	u8 padr		= (font->padding & 0x30) >> 4;
-	u8 padb		= (font->padding & 0xC0) >> 6;
-
 	DU right	= rect->left + rect->width;
-	DU textW	= strlen(text) * font->charwidth;
-
 	DU x, y;
 
-	COLOUR fg, bg;
+	COLOUR palette[4];
 	if(flags & Inverse)
 	{
-		fg = background;
-		bg = foreground;
+		palette[0]	= (flags & Fill) ? 				foreground : TRANSPARENT;
+		palette[1]	= (flags & (Outline | Fill)) ? 	foreground : TRANSPARENT;
+		palette[2]	= background;
+		palette[3]	= background;
 	}
 	else
 	{
-		fg = foreground;
-		bg = background;
+		palette[0]	= (flags & Fill) ? 				background : TRANSPARENT;
+		palette[1]	= (flags & (Outline | Fill)) ? 	background : TRANSPARENT;
+		palette[2]	= foreground;
+		palette[3]	= foreground;
 	}
-
-	u32 fbrush	= fg | (fg << 8) | (fg << 16) | (fg << 24);
 
 	int lstart 	= 0;
 	int lend	= font->charheight;
-	int lheight	= (flags & AlignBottom) ? rect->height - padb : rect->height - padt;
 
 	// Calculate Y position for rendering, and the line within the font bitmap to render from
 	if(flags & AlignBottom)
 	{
-		y		= ((rect->top + rect->height) - font->charheight) - padb;
-		if(lend < lheight)
-			lstart = lend - lheight;
+		y		= (rect->top + rect->height) - font->charheight;
+		if(lend < rect->height)
+			lstart = lend - rect->height;
 	}
 	else
 	{
-		y		= rect->top + padt;
-		if(lend > lheight)
-			lend 	= lheight;
-	}
-
-	// First fill in the background if applicable
-	if(flags & Fill)
-	{
-		DU bwidth	= textW + padl + padr;
-		DU bheight = font->charheight + padt + padb;
-
-		if(bwidth > rect->width)
-			bwidth = rect->width;
-		if(bheight > rect->height)
-			bheight = rect->height;
-
-		while(bheight-- > 0)
-			mset(ptToOffset(rect->left, rect->top + bheight), bg, bwidth);
-	}
-	else if(flags & Outline)
-	{
-		x 			= (flags & AlignRight) ? (right - textW) - padr : rect->left + padl;
-		u32 bbrush	= bg | (bg << 8) | (bg << 16) | (bg << 24);
-
-		// Loop through each character rendering an outline in the background colour
-		for(char* c = text; *c; c++)
-		{
-			if(x + font->charwidth < rect->left)
-				continue;
-			if(x >= right)
-				break;
-
-			// Loop through each char bitmap line
-			int yoff = 0;
-			for(int i=lstart; i<lend; i++)
-			{
-				u8* src	= font->data + ((*c-font->asciiOffset) * font->charheight) + (i * font->bytesPerLine);
-				u8* dst = ptToOffset(x, y + yoff++);
-				u8 ofst	= ((u32)dst & 0x03);
-
-				dst = (u8*)((u32)dst & ~0x03);
-
-				// Clear first 4 bytes of mask, no need to worry about the rest
-				*((u32*)mask) = 0x00;
-				expand1bpp8Mask(mask + ofst, src, font->charwidth);
-
-				// Blit above, below, left and right using the mask.
-				// Note that dst and mask are both word-aligned and our pointer arithmetic requires
-				// that the frame buffer line width is a multiple of 4.
-				blitbrush(&bbrush, dst - FRAME_BUF_WIDTH, mask, ofst + font->charwidth);
-				blitbrush(&bbrush, dst + FRAME_BUF_WIDTH, mask, ofst + font->charwidth);
-
-				for(int j=0; j<=font->bytesPerLine; j++)
-				{
-					u32 tmp = mask[j];
-					mask[j] = (tmp << 8) || (tmp >> 8);
-				}
-
-				blitbrush(&bbrush, dst, mask, ofst + font->charwidth);
-			}
-
-			x += font->charwidth;
-		}
+		y		= rect->top;
+		if(lend > rect->height)
+			lend 	= rect->height;
 	}
 
 	// Calculate X position to render first character
-	x = (flags & AlignRight) ? (right - textW) - padr : rect->left + padl;
+	if(flags & AlignRight)
+	{
+		DU textW	= strlen(text) * font->charwidth;
+		x 			= right - textW;
+	}
+	else
+	{
+		x 			= rect->left;
+	}
 
 	// Loop through each character rendering in the foreground colour
 	for(char* c = text; *c; c++)
@@ -203,14 +168,14 @@ void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
 			u8* dst = ptToOffset(x, y + yoff++);
 
 			u8 ofst	= ((u32)dst & 0x03);
-			dst = (u8*)((u32)dst & ~0x03);
+			dst 	= (u8*)((u32)dst & ~0x03);
 
-			// Clear first 4 bytes of mask, no need to worry about the rest
-			*((u32*)mask) = 0x00;
-			expand1bpp8Mask(mask + ofst, src, font->charwidth);
+			u8 wcnt	= font->charwidth >> 2;
+			if(font->charwidth & 0x03)
+				wcnt |= 0x01;
 
-			// blit foreground colour using mask
-			blitbrush(&fbrush, dst, mask, ofst + font->charwidth);
+			expand2bpp8((u32*)bmap, (u32*)mask, ofst, src, font->charwidth, palette);
+			blit((u32*)bmap, (u32*)dst, (u32*)mask, wcnt);
 		}
 
 		x += font->charwidth;

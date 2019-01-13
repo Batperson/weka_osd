@@ -17,4 +17,14 @@
 #define ITM_Port16(n)   (*((volatile unsigned short*)(0xE0000000+4*n)))
 #define ITM_Port32(n)   (*((volatile unsigned long *)(0xE0000000+4*n)))
 
+ALWAYS_INLINE u32 rol (u32 val, u32 rot)
+{
+  return (val<<rot) | (val>>(-rot&31));
+}
+
+ALWAYS_INLINE u32 ror (u32 val, u32 rot)
+{
+  return (val>>rot) | (val<<(-rot&31));
+}
+
 #endif /* MISC_H_ */
