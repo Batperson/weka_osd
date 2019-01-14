@@ -751,7 +751,7 @@ void INTERRUPT PendSV_Handler()
 	for(int i=0; i<14; i++)
 	{
 		selectForeColour(cols[i]);
-		drawText3(&rc, &tinyFont2, Outline, "-./0-./0-./0-./0-./0-./0-./0-./0-./0-./0");
+		drawText2(&rc, &tinyFont2, Outline, "-./0-./0-./0-./0-./0-./0-./0-./0-./0-./0");
 
 		rc.top += tinyFont2.charheight + 6;
 	}

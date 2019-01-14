@@ -31,11 +31,10 @@ ALWAYS_INLINE void expand2bpp8(u32* dst, u32* mask, u8 offset, u8* src, u8 cnt, 
 {
 	register u32 mval		= 0xffffffff;
 	register u32 dval		= 0x00;
+	register u32 sror		= 6;
+	register u32 drol		= offset << 3;
 	register u32 pindex;
 	register u32 tmp;
-
-	int sror				= 6;
-	int drol				= offset << 3;
 
 	while(cnt-- > 0)
 	{
@@ -52,7 +51,7 @@ ALWAYS_INLINE void expand2bpp8(u32* dst, u32* mask, u8 offset, u8* src, u8 cnt, 
 		dval 				|= tmp;
 
 		// mask bits are cleared if palette is an opaque colour, set if not.
-		mval 				&= rol(tmp ? 0xffffff00 : 0xffffffff, drol);
+		mval 				&= ROL(tmp ? 0xffffff00 : 0xffffffff, drol);
 
 		if((drol += 8) > 24)
 		{
@@ -103,7 +102,7 @@ ALWAYS_INLINE void blit(u32* src, u32* dst, u32* mask, int cnt)
   * @param text: The text to render.
   * @retval None
   */
-void drawText3(PRECT rect, PFONT font, DrawFlags flags, char* text)
+void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
 {
 	DU right	= rect->left + rect->width;
 	DU x, y;
