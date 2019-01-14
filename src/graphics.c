@@ -197,31 +197,6 @@ void inflateRect(PRECT rc, DU width, DU height)
 	rc->height	+= (height * 2);
 }
 
-void inflatePoints(PPOINT points, u16 cnt, DU width, DU height)
-{
-	POINT min = { points[0].x, points[0].y };
-	POINT max = { points[0].x, points[0].y };
-
-	for(u16 i=1; i<cnt; i++)
-	{
-		if(points[i].x < min.x)
-			min.x = points[i].x;
-		if(points[i].y < min.y)
-			min.y = points[i].y;
-		if(points[i].x > max.x)
-			max.x = points[i].x;
-		if(points[i].y > max.y)
-			max.y = points[i].y;
-	}
-
-	POINT ctr = { (min.x + max.x) >> 1, (min.y + max.y) >> 1 };
-	for(u16 i=0; i<cnt; i++)
-	{
-		points[i].x += (points[i].x < ctr.x) ? -width : width;
-		points[i].y += (points[i].y < ctr.y) ? -height : height;
-	}
-}
-
 void offsetRect(PRECT rc, DU left, DU top)
 {
 	rc->left	+= left;
@@ -331,40 +306,9 @@ void drawRect(PRECT rect, DrawFlags flags)
 	}
 }
 
-void drawVertArrow(PRECT rect, DrawFlags alignment)
-{
-	DU halfWidth 	= rect->width >> 1;
-	DU x 			= rect->left + halfWidth;
-	DU xi			= 0;
-	DU ys, ye, yi;
-
-	if(alignment & AlignTop)
-	{
-		ys	= rect->top + rect->height-1;
-		ye	= rect->top;
-		yi 	= -1;
-	}
-	else
-	{
-		ys	= rect->top;
-		ye	= rect->top + rect->height-1;
-		yi 	= 1;
-	}
-
-	for(DU i=ys; i != ye; i += yi)
-	{
-		mset(ptToOffset(x - xi, i), foreground, (xi * 2) + 1);
-		xi++;
-	}
-}
-
 void drawLinesImpl(PPOINT pt, u16 cnt, u16 incr, DrawFlags flags, PRECT clip)
 {
-	COLOUR fore;
-	u16 ocnt 	= cnt;
-
-draw:
-	fore	= (flags & (Inverse | Outline)) ? background : foreground;
+	COLOUR fore = (flags & Inverse) ? background : foreground;
 
 	while(cnt > 0)
 	{
@@ -387,14 +331,6 @@ draw:
 
 		x=line->p1.x;
 		y=line->p1.y;
-
-		if(flags & Outline)
-		{
-			if(dx == 0 || dy != 0)
-				x--;
-			if(dy == 0 || dx != 0)
-				y--;
-		}
 
 		if(dy == 0)
 		{
@@ -479,15 +415,6 @@ draw:
 		cnt--;
 		pt += incr;
 	}
-
-	if(flags & Outline)
-	{
-		pt 		-= (ocnt * incr);
-		cnt		= ocnt;
-		flags 	&= ~Outline;
-
-		goto draw;
-	}
 }
 
 void drawLine(PLINE line, DrawFlags flags, PRECT clip)
@@ -502,13 +429,7 @@ void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip)
 
 void drawPolyLine(PPOINT points, u16 cnt, DrawFlags flags, PRECT clip)
 {
-	if(flags & Outline)
-	{
-		drawLinesImpl(points, cnt-1, 1, Inverse, clip);
-		inflatePoints(points, cnt, -1, -1);
-	}
-
-	drawLinesImpl(points, cnt-1, 1, None, clip);
+	drawLinesImpl(points, cnt-1, 1, flags, clip);
 }
 
 void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)

@@ -282,12 +282,11 @@ void renderArtificialHorizon(PRENDERER r)
 					rc.left		= pts[0].x;
 					rc.top		= pts[0].y;
 
-					DrawFlags flags = (pa->hdr.flags & RF_OUTLINE);
-					drawText(&rc, pa->font, flags, sz);
+					drawText(&rc, pa->font, Fill, sz);
 
 					rc.left		= pts[1].x;
 					rc.top		= pts[1].y;
-					drawText(&rc, pa->font, flags, sz);
+					drawText(&rc, pa->font, Fill, sz);
 				}
 
 				lines[lcnt].p1.x 	= ctr.x - pa->centreClearance - pa->pitchLadderWidth;
@@ -313,7 +312,13 @@ void renderArtificialHorizon(PRENDERER r)
 		}
 
 		rotatePts((PPOINT)lines, lcnt << 1, &ctr, rollValue);
-		drawLines(lines, lcnt, pa->hdr.flags & RF_OUTLINE, &pa->hdr.rect);
+		drawLines(lines, lcnt, None, &pa->hdr.rect);
+
+		if(pa->hdr.flags & RF_OUTLINE)
+		{
+			offsetPts((PPOINT)lines, lcnt << 1, 0, -1);
+			drawLines(lines, lcnt, Inverse, &pa->hdr.rect);
+		}
 
 		divs -= cnt;
 	}
@@ -342,10 +347,144 @@ void renderArrow(PRENDERER r)
 	COLOUR ofc		= selectForeColour(r->colour);
 
 	rotatePts(pts, sizeof(pts) / sizeof(POINT), &ctr, value);
-	drawPolyLine(pts, sizeof(pts) / sizeof(POINT), r->flags & RF_OUTLINE, NULL);
+	drawPolyLine(pts, sizeof(pts) / sizeof(POINT), None, NULL);
 	floodFill(&ctr, r->colour);
 
 	selectForeColour(ofc);
+}
+
+void renderVertPointer(PRECT rect, RenderFlagsType rf)
+{
+	DU halfWidth 	= rect->width >> 1;
+
+	POINT pt[4];
+	if(rf & RF_ALIGN_BOTTOM)
+	{
+		pt[0].x		= rect->left;
+		pt[0].y		= rect->top + rect->height;
+		pt[1].x		= rect->left + halfWidth;
+		pt[1].y		= rect->top;
+		pt[2].x		= rect->left + (halfWidth * 2);
+		pt[2].y		= rect->top + rect->height;
+		pt[3].x		= rect->left;
+		pt[3].y		= rect->top + rect->height;
+	}
+	else
+	{
+		pt[0].x		= rect->left;
+		pt[0].y		= rect->top;
+		pt[1].x		= rect->left + halfWidth;
+		pt[1].y		= rect->top + rect->height;
+		pt[2].x		= rect->left + (halfWidth * 2);
+		pt[2].y		= rect->top;
+		pt[3].x		= rect->left;
+		pt[3].y		= rect->top;
+	}
+
+	if(rf & RF_OUTLINE)
+	{
+		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), Inverse, NULL);
+
+		if(rf & RF_ALIGN_BOTTOM)
+		{
+			pt[0].x++;
+			pt[0].y--;
+			pt[1].y++;
+			pt[2].x--;
+			pt[2].y--;
+			pt[3].x++;
+			pt[3].y--;
+		}
+		else
+		{
+			pt[0].x++;
+			pt[0].y++;
+			pt[1].y--;
+			pt[2].x--;
+			pt[2].y++;
+			pt[3].x++;
+			pt[3].y++;
+		}
+
+		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
+	}
+	else
+	{
+		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
+	}
+}
+
+void renderHorzPointer(PRECT rc, RenderFlagsType rf)
+{
+	POINT pt[6];
+	DU hh 	= rc->height >> 1;
+
+	if(rf & RF_ALIGN_RIGHT)
+	{
+		pt[0].x = rc->left;
+		pt[0].y	= rc->top;
+		pt[1].x	= rc->left + rc->width - hh;
+		pt[1].y = rc->top;
+		pt[2].x = rc->left + rc->width;
+		pt[2].y = pt[1].y + hh;
+		pt[3].x = pt[1].x;
+		pt[3].y = rc->top + hh * 2;
+		pt[4].x = rc->left;
+		pt[4].y = pt[3].y;
+		pt[5].x = rc->left;
+		pt[5].y = rc->top;
+	}
+	else
+	{
+		pt[0].x = rc->left + hh;
+		pt[0].y	= rc->top;
+		pt[1].x	= rc->left + rc->width;
+		pt[1].y = rc->top;
+		pt[2].x = pt[1].x;
+		pt[2].y = rc->top + hh * 2;
+		pt[3].x = rc->left + hh;
+		pt[3].y = rc->top + hh * 2;
+		pt[4].x = rc->left;
+		pt[4].y = rc->top + hh;
+		pt[5].x = rc->left + hh;
+		pt[5].y = rc->top;
+	}
+
+	if(rf & RF_OUTLINE)
+	{
+		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), Inverse, NULL);
+
+		if(rf & RF_ALIGN_RIGHT)
+		{
+			pt[0].x++;
+			pt[0].y++;
+			pt[1].y++;
+			pt[2].x--;
+			pt[3].y--;
+			pt[4].x++;
+			pt[4].y--;
+			pt[5].x++;
+			pt[5].y++;
+		}
+		else
+		{
+			pt[0].y++;
+			pt[1].x--;
+			pt[1].y++;
+			pt[2].x--;
+			pt[2].y--;
+			pt[3].y--;
+			pt[4].x++;
+			pt[5].y++;
+			pt[5].x++;
+		}
+
+		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
+	}
+	else
+	{
+		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
+	}
 }
 
 void renderHeadingTape(PRENDERER r)
@@ -458,7 +597,12 @@ void renderHeadingTape(PRENDERER r)
 			startPoint		+= pt->pixelsPerDivision;
 		}
 
-		drawLines(lines, lcnt, df, &pt->hdr.rect);
+		drawLines(lines, lcnt, None, NULL);
+		if(pt->hdr.flags & RF_OUTLINE)
+		{
+			offsetPts((PPOINT)lines, lcnt << 1, -1, 0);
+			drawLines(lines, lcnt, Inverse, NULL);
+		}
 
 		divs -= lcnt;
 	}
@@ -469,62 +613,32 @@ void renderHeadingTape(PRENDERER r)
 	rc.width	= cx;
 	rc.height	= cx;
 
-	drawVertArrow(&rc, (pt->hdr.flags & RF_ALIGN_BOTTOM) ? AlignBottom : AlignTop);
+	renderVertPointer(&rc, pt->hdr.flags);
 
 	rc.left		= midPoint - (((pt->font->charwidth) * 3) >> 1);
 	rc.top		+= (pt->hdr.flags & RF_ALIGN_BOTTOM) ? cx : -cx;
-	rc.width	= (pt->font->charwidth * 3) + 2;
-	rc.height	= pt->font->charheight + 4;
+	rc.width	= (pt->font->charwidth * 3) + 3;
+	rc.height	= pt->font->charheight + 5;
 
-	drawRect(&rc, Fill | Outline);
+	if(pt->hdr.flags & RF_OUTLINE)
+	{
+		drawRect(&rc, Inverse | Outline);
+		inflateRect(&rc, -1, -1);
+		drawRect(&rc, Outline);
+	}
+	else
+	{
+		drawRect(&rc, Outline);
+	}
 
 	snprintf(sz, sizeof(sz), "%d", (int)truncf(value));
 
 	rc.left = midPoint - (((strlen(sz) * pt->font->charwidth) >> 1)-1);
 	rc.top += 2;
 
-	drawText(&rc, pt->font, None, sz);
+	drawText(&rc, pt->font, pt->hdr.flags & RF_OUTLINE, sz);
 
 	selectForeColour(ofc);
-}
-
-void renderHorzPointer(PRECT rc, RenderFlagsType rf)
-{
-	POINT pt[6];
-	DU hh 	= rc->height >> 1;
-
-	if(rf & RF_ALIGN_RIGHT)
-	{
-		pt[0].x = rc->left;
-		pt[0].y	= rc->top;
-		pt[1].x	= rc->left + rc->width - hh;
-		pt[1].y = rc->top;
-		pt[2].x = rc->left + rc->width;
-		pt[2].y = pt[1].y + hh;
-		pt[3].x = pt[1].x;
-		pt[3].y = rc->top + hh * 2;
-		pt[4].x = rc->left;
-		pt[4].y = pt[3].y;
-		pt[5].x = rc->left;
-		pt[5].y = rc->top;
-	}
-	else
-	{
-		pt[0].x = rc->left + hh;
-		pt[0].y	= rc->top;
-		pt[1].x	= rc->left + rc->width;
-		pt[1].y = rc->top;
-		pt[2].x = pt[1].x;
-		pt[2].y = rc->top + hh * 2;
-		pt[3].x = rc->left + hh;
-		pt[3].y = rc->top + hh * 2;
-		pt[4].x = rc->left;
-		pt[4].y = rc->top + hh;
-		pt[5].x = rc->left + hh;
-		pt[5].y = rc->top;
-	}
-
-	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), rf & Outline, NULL);
 }
 
 void renderTape(PRENDERER r)
@@ -613,7 +727,12 @@ void renderTape(PRENDERER r)
 			startPoint		+= pt->pixelsPerDivision;
 		}
 
-		drawLines(lines, lcnt, df, &pt->hdr.rect);
+		drawLines(lines, lcnt, None, NULL);
+		if(pt->hdr.flags & RF_OUTLINE)
+		{
+			offsetPts((PPOINT)lines, lcnt << 1, 0, -1);
+			drawLines(lines, lcnt, Inverse, NULL);
+		}
 
 		divs -= lcnt;
 	}
@@ -700,7 +819,13 @@ void renderVerticalSlider(PRENDERER r)
 
 		if(++curLine == LINE_RENDER_BATCH || i == divs)
 		{
-			drawLines(lines, curLine, df, NULL);
+			drawLines(lines, curLine, None, NULL);
+			if(ps->hdr.flags & RF_OUTLINE)
+			{
+				offsetPts((PPOINT)lines, curLine << 1, 0, -1);
+				drawLines(lines, curLine, Inverse, NULL);
+			}
+
 			curLine = 0;
 		}
 	}
@@ -730,6 +855,7 @@ void INTERRUPT PendSV_Handler()
 
 	clearRenderBuf();
 
+	/*
 	RECT rc = { 100, 40, 200, 20 };
 	COLOUR cols[] = {
 			RED,
@@ -755,8 +881,8 @@ void INTERRUPT PendSV_Handler()
 
 		rc.top += tinyFont2.charheight + 6;
 	}
+	*/
 
-	/*
 	for(PRENDERER* p = renderers; *p != NULL; p++)
 	{
 		PRENDERER r = *p;
@@ -767,7 +893,7 @@ void INTERRUPT PendSV_Handler()
 
 		r->renderProc(r);
 	}
-	*/
+
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;
