@@ -847,6 +847,7 @@ void renderVerticalSlider(PRENDERER r)
 extern FONT systemFont;
 extern FONT tinyFont;
 extern FONT tinyFont2;
+extern FONT minimFont;
 
 void INTERRUPT PendSV_Handler()
 {
@@ -855,7 +856,6 @@ void INTERRUPT PendSV_Handler()
 
 	clearRenderBuf();
 
-	/*
 	RECT rc = { 100, 40, 200, 20 };
 	COLOUR cols[] = {
 			RED,
@@ -874,15 +874,19 @@ void INTERRUPT PendSV_Handler()
 			DKGRAY
 	};
 
-	for(int i=0; i<14; i++)
+	for(int i=0; i<9; i++)
 	{
 		selectForeColour(cols[i]);
-		drawText2(&rc, &tinyFont2, Outline, "-./0-./0-./0-./0-./0-./0-./0-./0-./0-./0");
+		drawText2(&rc, &minimFont, Fill | Inverse, "WekaOSD 0123456789!");
 
-		rc.top += tinyFont2.charheight + 6;
+		rc.top += minimFont.charheight + 6;
 	}
-	*/
 
+	RECT rc2 = { 20, 40, 100, 10 };
+	selectForeColour(WHITE);
+	drawText2(&rc2, &tinyFont2, Outline, "-./0123456789");
+
+	/*
 	for(PRENDERER* p = renderers; *p != NULL; p++)
 	{
 		PRENDERER r = *p;
@@ -893,7 +897,7 @@ void INTERRUPT PendSV_Handler()
 
 		r->renderProc(r);
 	}
-
+	*/
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;

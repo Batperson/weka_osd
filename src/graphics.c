@@ -36,14 +36,18 @@ ALWAYS_INLINE void expand2bpp8(u32* dst, u32* mask, u8 offset, u8* src, u8 cnt, 
 	register u32 pindex;
 	register u32 tmp;
 
-	while(cnt-- > 0)
+	for(; cnt > 0; cnt--)
 	{
 		// src is shifted right based on the inverse of src offset, since left-most palette index is at left-most position in src
 		pindex				= ((*src) >> sror) & 0x03;
-		if((sror -= 2) < 0)
+		if(sror == 0)
 		{
 			sror = 6;
 			src++;
+		}
+		else
+		{
+			sror -= 2;
 		}
 
 		// dst and mask shifts take account of little-endian word arrangement, i.e. left-most pixel goes at right-most byte
@@ -51,7 +55,8 @@ ALWAYS_INLINE void expand2bpp8(u32* dst, u32* mask, u8 offset, u8* src, u8 cnt, 
 		dval 				|= tmp;
 
 		// mask bits are cleared if palette is an opaque colour, set if not.
-		mval 				&= ROL(tmp ? 0xffffff00 : 0xffffffff, drol);
+		tmp					= tmp ? 0xffffff00 : 0xffffffff;
+		mval 				&= ROL(tmp, drol);
 
 		if((drol += 8) > 24)
 		{
@@ -81,10 +86,10 @@ ALWAYS_INLINE void expand2bpp8(u32* dst, u32* mask, u8 offset, u8* src, u8 cnt, 
   * @param cnt:  Number of words (4-pixel blocks) to transfer.
   * @retval None
   */
-ALWAYS_INLINE void blit(u32* src, u32* dst, u32* mask, int cnt)
+ALWAYS_INLINE void blit(u32* src, u32* dst, u32* mask, u8 cnt)
 {
 	register u32 tmp;
-	while(cnt-- > 0)
+	for(; cnt > 0; cnt--)
 	{
 		tmp 		= *dst;
 		tmp			&= *mask++;
@@ -163,7 +168,7 @@ void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
 		int yoff = 0;
 		for(int i=lstart; i<lend; i++)
 		{
-			u8* src	= font->data + ((*c-font->asciiOffset) * font->charheight) + (i * font->bytesPerLine);
+			u8* src	= font->data + ((((*c-font->asciiOffset) * font->charheight) + i) * font->bytesPerLine);
 			u8* dst = ptToOffset(x, y + yoff++);
 
 			u8 ofst	= ((u32)dst & 0x03);
