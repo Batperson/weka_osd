@@ -874,12 +874,12 @@ void INTERRUPT PendSV_Handler()
 			DKGRAY
 	};
 
-	for(int i=0; i<9; i++)
+	for(int i=0; i<14; i++)
 	{
 		selectForeColour(cols[i]);
-		drawText2(&rc, &minimFont, Fill | Inverse, "WekaOSD 0123456789!");
+		drawText2(&rc, &systemFont, Outline, "WEKA!");
 
-		rc.top += minimFont.charheight + 6;
+		rc.top += systemFont.charheight;
 	}
 
 	RECT rc2 = { 20, 40, 100, 10 };

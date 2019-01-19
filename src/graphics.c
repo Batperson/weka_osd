@@ -156,6 +156,7 @@ void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
 		x 			= rect->left;
 	}
 
+
 	// Loop through each character rendering in the foreground colour
 	for(char* c = text; *c; c++)
 	{
@@ -164,19 +165,19 @@ void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
 		if(x >= right)
 			break;
 
+		// Byte offset within the destination word in the frame buffer
+		u8 ofst = (u8)(u32)ptToOffset(x, 0) & 0x03;
+
+		// Number of words which need to be blitted.
+		u8 bcnt = ofst + font->charwidth;
+		u8 wcnt	= (bcnt >> 2) + (bcnt & 0x03 ? 1 : 0);
+
 		// Loop through each char bitmap line
 		int yoff = 0;
 		for(int i=lstart; i<lend; i++)
 		{
 			u8* src	= font->data + ((((*c-font->asciiOffset) * font->charheight) + i) * font->bytesPerLine);
-			u8* dst = ptToOffset(x, y + yoff++);
-
-			u8 ofst	= ((u32)dst & 0x03);
-			dst 	= (u8*)((u32)dst & ~0x03);
-
-			u8 wcnt	= font->charwidth >> 2;
-			if(font->charwidth & 0x03)
-				wcnt |= 0x01;
+			u8* dst = (u8*)((u32)ptToOffset(x, y + yoff++) & ~0x03);
 
 			expand2bpp8((u32*)bmap, (u32*)mask, ofst, src, font->charwidth, palette);
 			blit((u32*)bmap, (u32*)dst, (u32*)mask, wcnt);
