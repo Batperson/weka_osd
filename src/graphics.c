@@ -107,8 +107,9 @@ ALWAYS_INLINE void blit(u32* src, u32* dst, u32* mask, u8 cnt)
   * @param text: The text to render.
   * @retval None
   */
-void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
+void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
 {
+	u8 stride	= (font->stride) ? font->stride : font->charwidth;
 	DU right	= rect->left + rect->width;
 	DU x, y;
 
@@ -160,7 +161,7 @@ void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
 	// Loop through each character rendering in the foreground colour
 	for(char* c = text; *c; c++)
 	{
-		if(x + font->charwidth < rect->left)
+		if(x + stride < rect->left)
 			continue;
 		if(x >= right)
 			break;
@@ -183,7 +184,7 @@ void drawText2(PRECT rect, PFONT font, DrawFlags flags, char* text)
 			blit((u32*)bmap, (u32*)dst, (u32*)mask, wcnt);
 		}
 
-		x += font->charwidth;
+		x += stride;
 	}
 }
 
@@ -436,143 +437,6 @@ void drawLines(PLINE line, u16 cnt, DrawFlags flags, PRECT clip)
 void drawPolyLine(PPOINT points, u16 cnt, DrawFlags flags, PRECT clip)
 {
 	drawLinesImpl(points, cnt-1, 1, flags, clip);
-}
-
-void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
-{
-	DU x, y;
-	char* sz;
-	int sx, sy;
-
-	if(flags & AlignRight)
-	{
-		int l = strlen(text);
-		DU w  = l * font->charwidth;
-
-		x = (rect->left + rect->width) - w;
-		y = rect->top;
-
-		if(x < rect->left)
-		{
-			sz = text + (w / font->charwidth);
-			sx = (w % font->charwidth);
-		}
-		else
-		{
-			sz = text;
-			sx = 0;
-		}
-	}
-	else
-	{
-		sx = 0;
-		sz = text;
-		x = rect->left;
-		y = rect->top;
-	}
-
-	sy = 0;
-	if(flags & AlignBottom)
-	{
-		DU d;
-		y = (rect->top + rect->height) - font->charheight;
-		if((d = y - rect->top) < 0)
-			sy = -d;
-	}
-
-	COLOUR fg 	= (flags & Inverse) ? background : foreground;
-	COLOUR bg 	= (flags & Inverse) ? foreground : background;
-	u32 bbrsh 	= bg | bg << 8 | bg << 16 | bg << 24;
-	u32 defmask	= (flags & Fill) ? 0xffffffff : 0x00;
-	u8 padl		= (font->padding & 0x03);
-	u8 padt		= (font->padding & 0x0C) >> 2;
-	u8 padr		= (font->padding & 0x30) >> 4;
-	u8 padb		= (font->padding & 0xC0) >> 6;
-
-	while(*sz)
-	{
-		for(int i=sy; i<font->charheight; i++)
-		{
-			PPIXEL dest = ptToOffset(x, y + i);
-
-			// Note will have issues if we have a font with chars more than 8 wide and we start at sx >= 8
-
-			register u8* src	= font->data + ((*sz-font->asciiOffset) * font->charheight) + (i * font->bytesPerLine);
-			register u32* dw	= (u32*)((u32)dest & ~0x3);	// Destination word, the frame buffer word we are blitting to
-			register u8 dwp		= ((u32)dest & 0x3);		// Destination work position, the byte index within dw for the current byte we are setting
-			register u32 v		= 0x80 >> sx;				// The bit in src that we expect to see set if there is an active pixel
-			register u32 data	= bbrsh;					// The buffer that will be combined with [dest] using [mask]
-			register u32 mask	= defmask << (dwp * 8);
-
-			for(int j=sx; j<font->charwidth; j++)
-			{
-				if((x + j) >= (rect->left + rect->width))
-					break;
-
-				register u8 masked 		= 0;			// if 1, then we will plot a pixel
-				register u32 shift 		= (dwp * 8);	// How much to left-shift to reach the current pixel position in the current word
-
-				// Note: [shift] must take account of little-endian word arrangement, i.e. left-most pixel goes at right-most byte, so it is a left shift not a right.
-				if(flags & Outline)
-				{
-					if(j > 0 && (*src & v << 1))
-						masked = 1;
-					else if(j < font->charwidth-1 && (*src & v >> 1))
-						masked = 1;
-					else if(i > 0 && (*(src - font->bytesPerLine) & v))
-						masked = 1;
-					else if(i < font->charheight-1 && (*(src + font->bytesPerLine) & v))
-						masked = 1;
-				}
-
-				if(*src & v)
-				{
-					masked = 1;
-					data &= ~(0xff << shift);
-					data |= (fg << shift);
-				}
-
-				if(masked == 1)
-					mask |= (0xff << shift);
-
-				if(++dwp >= 4)
-				{
-					if(mask == 0xffffffff)
-						*dw = data;
-					else if(mask > 0)
-						*dw = ((*dw & ~mask) | (data & mask));
-
-					dwp 	= 0;
-					mask 	= defmask;
-					data	= bbrsh;
-					dw++;
-				}
-
-				if(!(v >>= 1))
-				{
-					v = 0x80;
-					src++;
-				}
-			}
-
-			if(dwp > 0)
-			{
-				if(mask == 0xffffffff)
-					*dw = data;
-				else if(mask > 0)
-					*dw = ((*dw & ~mask) | (data & mask));
-			}
-
-			if((y + i) >= (rect->top + rect->height))
-				break;
-		}
-
-		sx = 0;
-		sz++;
-
-		if((x += font->charwidth) >= rect->left + rect->width)
-			break;
-	}
 }
 
 void floodFill(PPOINT pt, COLOUR clr)

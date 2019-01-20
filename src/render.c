@@ -874,17 +874,37 @@ void INTERRUPT PendSV_Handler()
 			DKGRAY
 	};
 
+	PFONT font = &systemFont;
 	for(int i=0; i<14; i++)
 	{
-		selectForeColour(cols[i]);
-		drawText2(&rc, &systemFont, Outline, "WEKA!");
+		for(int j=0; j<3; j++)
+		{
+			DrawFlags df;
+			switch(j)
+			{
+			case 0:
+				df 			= Outline;
+				break;
+			case 1:
+				df			= Fill;
+				break;
+			case 2:
+				df			= Inverse | Fill;
+				break;
+			}
 
-		rc.top += systemFont.charheight;
+			rc.left			= 100 + (40 * j);
+
+			selectForeColour(cols[i]);
+			drawText(&rc, font, df, "WEKA!");
+		}
+
+		rc.top += font->charheight + 1;
 	}
 
 	RECT rc2 = { 20, 40, 100, 10 };
 	selectForeColour(WHITE);
-	drawText2(&rc2, &tinyFont2, Outline, "-./0123456789");
+	drawText(&rc2, &tinyFont2, Outline, "-./0123456789");
 
 	/*
 	for(PRENDERER* p = renderers; *p != NULL; p++)
