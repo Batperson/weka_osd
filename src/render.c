@@ -893,16 +893,16 @@ void INTERRUPT PendSV_Handler()
 				break;
 			}
 
-			rc.left			= 100 + (40 * j);
+			rc.left			= 30 + (60 * j);
 
 			selectForeColour(cols[i]);
-			drawText(&rc, font, df, "WEKA!");
+			drawText(&rc, font, df, "WEKA OSD! 0123456789");
 		}
 
 		rc.top += font->charheight + 1;
 	}
 
-	RECT rc2 = { 20, 40, 100, 10 };
+	RECT rc2 = { 05, 40, 100, 10 };
 	selectForeColour(WHITE);
 	drawText(&rc2, &tinyFont2, Outline, "-./0123456789");
 
