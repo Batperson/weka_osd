@@ -57,8 +57,10 @@ void INTERRUPT HardFault_Handler()
   /* Go to infinite loop when Hard Fault exception occurs */
   while (1)
   {
-	  for(int i=0; i<400000000; i++)
-		  toggleLed3();
+	  for(int i=0; i<4000000; i++)
+		  ;
+
+	  toggleLed3();
   }
 }
 

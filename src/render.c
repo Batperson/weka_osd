@@ -130,9 +130,52 @@ void renderBarMeter(PRENDERER r)
 	selectForeColour(ofc);
 }
 
-void initBatteryMeterPolygon(POINT pt[9], RenderFlagsType rf)
+void initBatteryMeterPolygon(POINT pt[9], PRECT rect, RenderFlagsType rf)
 {
+	DU n			= rect->height / 3;
 
+	if(rf & RF_ALIGN_RIGHT)
+	{
+		pt[0].x		= rect->left;
+		pt[0].y		= rect->top;
+		pt[1].x		= rect->left + rect->width - 1;
+		pt[1].y		= rect->top;
+		pt[2].x		= pt[1].x;
+		pt[2].y		= rect->top + n;
+		pt[3].x		= pt[2].x + 1;
+		pt[3].y		= rect->top + n;
+		pt[4].x		= pt[3].x;
+		pt[4].y		= rect->top + rect->height - n;
+		pt[5].x		= pt[4].x - 1;
+		pt[5].y		= rect->top + rect->height - n;
+		pt[6].x		= pt[5].x;
+		pt[6].y		= rect->top + rect->height;
+		pt[7].x		= rect->left;
+		pt[7].y		= rect->top + rect->height;
+		pt[8].x		= rect->left;
+		pt[8].y		= rect->top;
+	}
+	else
+	{
+		pt[0].x		= rect->left + 1;
+		pt[0].y		= rect->top;
+		pt[1].x		= pt[0].x;
+		pt[1].y		= rect->top + n;
+		pt[2].x		= rect->left;
+		pt[2].y		= rect->top + n;
+		pt[3].x		= pt[2].x;
+		pt[3].y		= rect->top + (rect->height - n);
+		pt[4].x		= pt[3].x + 1;
+		pt[4].y		= rect->top + (rect->height - n);
+		pt[5].x		= pt[4].x;
+		pt[5].y		= rect->top + rect->height;
+		pt[6].x		= rect->left + rect->width;
+		pt[6].y		= rect->top + rect->height;
+		pt[7].x		= rect->left + rect->width;
+		pt[7].y		= rect->top;
+		pt[8].x		= rect->left + 1;
+		pt[8].y		= rect->top;
+	}
 }
 
 void renderBatteryMeter(PRENDERER r)
@@ -148,70 +191,37 @@ void renderBatteryMeter(PRENDERER r)
 
 	PSEGMENT seg	= getSegment(&pi->range, value);
 
-	DU n			= r->rect.height / 3;
-
 	COLOUR ofc		= selectForeColour(r->colour);
 
 	POINT pt[9];
-	RECT rc;
+	RECT rc			= { r->rect.left, r->rect.top, r->rect.width, r->rect.height };
+
+	if(r->flags & RF_OUTLINE)
+	{
+		initBatteryMeterPolygon(pt, &rc, r->flags);
+		drawPolyLine(pt, sizeof(pt) / sizeof(POINT), Inverse, NULL);
+
+		inflateRect(&rc, -1, -1);
+	}
+
+	initBatteryMeterPolygon(pt, &rc, r->flags);
 
 	if(r->flags & RF_ALIGN_RIGHT)
 	{
-		pt[0].x		= r->rect.left;
-		pt[0].y		= r->rect.top;
-		pt[1].x		= r->rect.left + r->rect.width - 1;
-		pt[1].y		= r->rect.top;
-		pt[2].x		= pt[1].x;
-		pt[2].y		= r->rect.top + n;
-		pt[3].x		= pt[2].x + 1;
-		pt[3].y		= r->rect.top + n;
-		pt[4].x		= pt[3].x;
-		pt[4].y		= r->rect.top + r->rect.height - n;
-		pt[5].x		= pt[4].x - 1;
-		pt[5].y		= r->rect.top + r->rect.height - n;
-		pt[6].x		= pt[5].x;
-		pt[6].y		= r->rect.top + r->rect.height;
-		pt[7].x		= r->rect.left;
-		pt[7].y		= r->rect.top + r->rect.height;
-		pt[8].x		= r->rect.left;
-		pt[8].y		= r->rect.top;
-
-		rc.left		= r->rect.left + 2;
-		rc.top		= r->rect.top + 2;
-		rc.height	= r->rect.height - 3;
-		rc.width	= r->rect.width - 4;
+		rc.left		= rc.left + 2;
+		rc.top		= rc.top + 2;
+		rc.height	= rc.height - 3;
+		rc.width	= rc.width - 4;
 	}
 	else
 	{
-		pt[0].x		= r->rect.left + 1;
-		pt[0].y		= r->rect.top;
-		pt[1].x		= pt[0].x;
-		pt[1].y		= r->rect.top + n;
-		pt[2].x		= r->rect.left;
-		pt[2].y		= r->rect.top + n;
-		pt[3].x		= pt[2].x;
-		pt[3].y		= r->rect.top + (r->rect.height - n);
-		pt[4].x		= pt[3].x + 1;
-		pt[4].y		= r->rect.top + (r->rect.height - n);
-		pt[5].x		= pt[4].x;
-		pt[5].y		= r->rect.top + r->rect.height;
-		pt[6].x		= r->rect.left + r->rect.width;
-		pt[6].y		= r->rect.top + r->rect.height;
-		pt[7].x		= r->rect.left + r->rect.width;
-		pt[7].y		= r->rect.top;
-		pt[8].x		= r->rect.left + 1;
-		pt[8].y		= r->rect.top;
-
-		rc.left		= r->rect.left + 3;
-		rc.top		= r->rect.top + 2;
-		rc.height	= r->rect.height - 4;
-		rc.width	= r->rect.width - 4;
+		rc.left		= rc.left + 3;
+		rc.top		= rc.top + 2;
+		rc.height	= rc.height - 4;
+		rc.width	= rc.width - 4;
 	}
 
-	if(r->flags & RF_OUTLINE)
-		inflateRect(&rc, -1, -1);
-
-	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), r->flags & RF_OUTLINE, NULL);
+	drawPolyLine(pt, sizeof(pt) / sizeof(POINT), None, NULL);
 
 	renderBarFill(&rc, seg, scale, r->flags);
 
@@ -615,7 +625,9 @@ void renderHeadingTape(PRENDERER r)
 
 	renderVertPointer(&rc, pt->hdr.flags);
 
-	rc.left		= midPoint - (((pt->font->charwidth) * 3) >> 1);
+	DU tmp		= pt->font->charwidth * 3;
+
+	rc.left		= (midPoint - (tmp >> 1)) - 2;
 	rc.top		+= (pt->hdr.flags & RF_ALIGN_BOTTOM) ? cx : -cx;
 	rc.width	= (pt->font->charwidth * 3) + 3;
 	rc.height	= pt->font->charheight + 5;
@@ -633,7 +645,10 @@ void renderHeadingTape(PRENDERER r)
 
 	snprintf(sz, sizeof(sz), "%d", (int)truncf(value));
 
-	rc.left = midPoint - (((strlen(sz) * pt->font->charwidth) >> 1)-1);
+	POINT cw;
+	measureText(pt->font, sz, &cw);
+
+	rc.left = midPoint - (cw.x >> 1);
 	rc.top += 2;
 
 	drawText(&rc, pt->font, pt->hdr.flags & RF_OUTLINE, sz);
@@ -753,7 +768,7 @@ void renderTape(PRENDERER r)
 
 	snprintf(sz, sizeof(sz), "%d", (int)truncf(value));
 
-	drawText(&rc, pt->font, df, sz);
+	drawText(&rc, pt->font, df | Fill, sz);
 
 	selectForeColour(ofc);
 }
@@ -856,57 +871,6 @@ void INTERRUPT PendSV_Handler()
 
 	clearRenderBuf();
 
-	RECT rc = { 100, 40, 200, 20 };
-	COLOUR cols[] = {
-			RED,
-			ORANGE,
-			GREEN,
-			LTGREEN,
-			BLUE,
-			AQUAMARINE,
-			YELLOW,
-			MAGENTA,
-			CYAN,
-			PURPLE,
-			WHITE,
-			BLACK,
-			GRAY,
-			DKGRAY
-	};
-
-	PFONT font = &systemFont;
-	for(int i=0; i<14; i++)
-	{
-		for(int j=0; j<3; j++)
-		{
-			DrawFlags df;
-			switch(j)
-			{
-			case 0:
-				df 			= Outline;
-				break;
-			case 1:
-				df			= Fill;
-				break;
-			case 2:
-				df			= Inverse | Fill;
-				break;
-			}
-
-			rc.left			= 30 + (60 * j);
-
-			selectForeColour(cols[i]);
-			drawText(&rc, font, df, "WEKA OSD! 0123456789");
-		}
-
-		rc.top += font->charheight + 1;
-	}
-
-	RECT rc2 = { 05, 40, 100, 10 };
-	selectForeColour(WHITE);
-	drawText(&rc2, &tinyFont2, Outline, "-./0123456789");
-
-	/*
 	for(PRENDERER* p = renderers; *p != NULL; p++)
 	{
 		PRENDERER r = *p;
@@ -917,7 +881,6 @@ void INTERRUPT PendSV_Handler()
 
 		r->renderProc(r);
 	}
-	*/
 
 	// Output cycle count for profiling
 	ITM_Port32(1)	= DWT->CYCCNT;

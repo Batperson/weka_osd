@@ -39,8 +39,6 @@ void initDebug()
 	DWT->CTRL |= 1 ;	// Enable CPU cycle counter
 }
 
-char szBtn0Msg[20];
-
 int main(void)
 {
 
@@ -73,8 +71,6 @@ int main(void)
 
   //setLowPowerMode(LowPowerDAC1);
 
-  sprintf(szBtn0Msg, "TEST0");
-
   while (1)
   {
   }
@@ -86,7 +82,5 @@ void INTERRUPT EXTI15_10_IRQHandler()
 {
 	EXTI_ClearITPendingBit(EXTI_Line13);
 
-	model.att.heading += 1;
 
-	sprintf(szBtn0Msg, "HDG: %f", model.att.heading);
 }

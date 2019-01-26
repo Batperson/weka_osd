@@ -120,6 +120,8 @@ void drawPolyLine(PPOINT points, u16 cnt, DrawFlags flags, PRECT clip);
 void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text);
 void floodFill(PPOINT pt, COLOUR clr);
 
+void measureText(PFONT font, char* text, PPOINT sz);
+
 COLOUR selectForeColour(COLOUR foreground);
 COLOUR selectBackColour(COLOUR background);
 

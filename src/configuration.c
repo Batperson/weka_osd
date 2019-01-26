@@ -258,17 +258,18 @@ void initRenderers()
 	ampVal->format				= "%.1fA";
 	ampVal->valueOffset			= offsetof(MODEL, elec.current);
 
-	renderers[0]				= (PRENDERER)ahi;
-	renderers[1]				= (PRENDERER)altitude;
-	renderers[2]				= (PRENDERER)airspeed;
-	renderers[3]				= (PRENDERER)heading;
-	renderers[4]				= (PRENDERER)arrow;
-	renderers[5]				= (PRENDERER)battery;
-	renderers[6]				= (PRENDERER)current;
-	renderers[7]				= (PRENDERER)status;
-	renderers[8]				= (PRENDERER)vario;
-	renderers[9]				= (PRENDERER)varioVal;
-	renderers[10]				= (PRENDERER)batVal;
-	renderers[11]				= (PRENDERER)ampVal;
-	renderers[12]				= NULL;
+	int i = 0;
+	renderers[i++]				= (PRENDERER)ahi;
+	renderers[i++]				= (PRENDERER)altitude;
+	renderers[i++]				= (PRENDERER)airspeed;
+	renderers[i++]				= (PRENDERER)heading;
+	renderers[i++]				= (PRENDERER)arrow;
+	renderers[i++]				= (PRENDERER)battery;
+	renderers[i++]				= (PRENDERER)current;
+	renderers[i++]				= (PRENDERER)status;
+	renderers[i++]				= (PRENDERER)vario;
+	renderers[i++]				= (PRENDERER)varioVal;
+	renderers[i++]				= (PRENDERER)batVal;
+	renderers[i++]				= (PRENDERER)ampVal;
+	renderers[i++]				= NULL;
 }

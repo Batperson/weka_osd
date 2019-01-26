@@ -135,9 +135,15 @@ void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
 	// Calculate Y position for rendering, and the line within the font bitmap to render from
 	if(flags & AlignBottom)
 	{
-		y		= (rect->top + rect->height) - font->charheight;
-		if(lend < rect->height)
+		if(lend > rect->height)
+		{
 			lstart = lend - rect->height;
+			y		= rect->top;
+		}
+		else
+		{
+			y		= (rect->top + rect->height) - lend;
+		}
 	}
 	else
 	{
@@ -186,6 +192,15 @@ void drawText(PRECT rect, PFONT font, DrawFlags flags, char* text)
 
 		x += stride;
 	}
+}
+
+void measureText(PFONT font, char* text, PPOINT sz)
+{
+	int len 	= strlen(text);
+	u8 stride	= (font->stride) ? font->stride : font->charheight;
+
+	sz->x		= (len > 0) ? font->charwidth + ((len-1) * stride) : 0;
+	sz->y		= font->charheight;
 }
 
 void initRect(PRECT rc, DU left, DU top, DU width, DU height)
